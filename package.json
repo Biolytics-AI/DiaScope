@@ -1,0 +1,38 @@
+{
+  "name": "d2-story-viewer",
+  "version": "0.1.0",
+  "description": "Turn D2 diagrams into narrated interactive stories",
+  "type": "module",
+  "main": "./dist/viewer/index.js",
+  "types": "./dist/viewer/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/viewer/index.js",
+      "types": "./dist/viewer/index.d.ts"
+    },
+    "./story": {
+      "import": "./dist/story/index.js",
+      "types": "./dist/story/index.d.ts"
+    }
+  },
+  "bin": {
+    "d2story": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc && node esbuild.mjs",
+    "build:tsc": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.21.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.5.0"
+  }
+}
