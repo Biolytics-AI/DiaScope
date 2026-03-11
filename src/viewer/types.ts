@@ -50,6 +50,11 @@ export interface ViewerOptions {
   autoBindControls?: boolean;
   /** Show a pop-out button in the top-right corner of the canvas. Useful when embedded via iframe. */
   expandable?: boolean;
+  /**
+   * Width (px) below which the layout switches to narrow (stacked) mode via ResizeObserver.
+   * Defaults to 640. Set to 0 to disable.
+   */
+  narrowBreakpoint?: number;
   document?: Document;
   /** svgPanZoom instance or compatible impl */
   svgPanZoom?: (svg: SVGElement, options: Record<string, unknown>) => SvgPanZoom;

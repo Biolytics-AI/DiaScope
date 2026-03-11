@@ -66,6 +66,8 @@ export class DiaScopeViewer {
   readonly exposeGlobals: boolean;
   readonly autoBindControls: boolean;
   readonly expandable: boolean;
+  readonly narrowBreakpoint: number;
+  private narrowObserver: ResizeObserver | null = null;
   private readonly svgPanZoomImpl: ((svg: SVGElement, opts: Record<string, unknown>) => SvgPanZoom) | undefined;
 
   constructor(options: ViewerOptions) {
@@ -85,6 +87,7 @@ export class DiaScopeViewer {
     this.exposeGlobals = options.exposeGlobals ?? true;
     this.autoBindControls = options.autoBindControls ?? false;
     this.expandable = options.expandable ?? false;
+    this.narrowBreakpoint = options.narrowBreakpoint ?? 640;
     this.svgPanZoomImpl = options.svgPanZoom ?? (typeof window !== "undefined" ? (window as Window & { svgPanZoom?: (svg: SVGElement, opts: Record<string, unknown>) => SvgPanZoom }).svgPanZoom : undefined);
   }
 
@@ -269,6 +272,17 @@ export class DiaScopeViewer {
     applyHighlight(this, this.steps[0]?.nodes ?? []);
     this.exposeInlineApi();
     if (this.expandable) this.setupExpandButton();
+    this.setupNarrowObserver();
+  }
+
+  setupNarrowObserver(): void {
+    if (this.narrowBreakpoint <= 0 || typeof ResizeObserver === "undefined") return;
+    const shell = this.getStoryShell();
+    if (!shell) return;
+    this.narrowObserver = new ResizeObserver(([e]) => {
+      shell.classList.toggle("narrow", (e.contentRect.width) < this.narrowBreakpoint);
+    });
+    this.narrowObserver.observe(shell);
   }
 
   setupExpandButton(): void {
@@ -298,6 +312,7 @@ export class DiaScopeViewer {
     if (this.onCanvasClick && this.canvasWrap) this.canvasWrap.removeEventListener("click", this.onCanvasClick);
     if (this.onKeyDown) this.doc.removeEventListener("keydown", this.onKeyDown);
     if (this.zoomRaf) cancelAnimationFrame(this.zoomRaf);
+    this.narrowObserver?.disconnect();
     this.pz?.destroy?.();
   }
 }

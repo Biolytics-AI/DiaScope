@@ -563,6 +563,7 @@ var DiaScopeBundle = (() => {
       this.onMouseMove = null;
       this.onCanvasClick = null;
       this.onKeyDown = null;
+      this.narrowObserver = null;
       this.doc = options.document ?? document;
       this.steps = options.steps ?? [];
       this.nodeIds = options.nodeIds ?? [];
@@ -579,6 +580,7 @@ var DiaScopeBundle = (() => {
       this.exposeGlobals = options.exposeGlobals ?? true;
       this.autoBindControls = options.autoBindControls ?? false;
       this.expandable = options.expandable ?? false;
+      this.narrowBreakpoint = options.narrowBreakpoint ?? 640;
       this.svgPanZoomImpl = options.svgPanZoom ?? (typeof window !== "undefined" ? window.svgPanZoom : void 0);
     }
     getDiagramSvg() {
@@ -736,6 +738,16 @@ var DiaScopeBundle = (() => {
       applyHighlight(this, this.steps[0]?.nodes ?? []);
       this.exposeInlineApi();
       if (this.expandable) this.setupExpandButton();
+      this.setupNarrowObserver();
+    }
+    setupNarrowObserver() {
+      if (this.narrowBreakpoint <= 0 || typeof ResizeObserver === "undefined") return;
+      const shell = this.getStoryShell();
+      if (!shell) return;
+      this.narrowObserver = new ResizeObserver(([e]) => {
+        shell.classList.toggle("narrow", e.contentRect.width < this.narrowBreakpoint);
+      });
+      this.narrowObserver.observe(shell);
     }
     setupExpandButton() {
       if (!this.canvasWrap) return;
@@ -763,6 +775,7 @@ var DiaScopeBundle = (() => {
       if (this.onCanvasClick && this.canvasWrap) this.canvasWrap.removeEventListener("click", this.onCanvasClick);
       if (this.onKeyDown) this.doc.removeEventListener("keydown", this.onKeyDown);
       if (this.zoomRaf) cancelAnimationFrame(this.zoomRaf);
+      this.narrowObserver?.disconnect();
       this.pz?.destroy?.();
     }
   };
@@ -889,12 +902,6 @@ var DiaScopeBundle = (() => {
     } else {
       const viewer = new ViewerCtor({ ...config, autoBindControls: true });
       viewer.init();
-    }
-    const shell = document.getElementById('story-shell');
-    if (shell && typeof ResizeObserver !== 'undefined') {
-      new ResizeObserver(([e]) => {
-        shell.classList.toggle('narrow', e.contentRect.width < 640);
-      }).observe(shell);
     }
   </script>
 </body>
