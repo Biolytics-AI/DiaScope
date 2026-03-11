@@ -5,12 +5,18 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname, basename, extname } from "node:path";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import { parseStoryFile } from "../story/parser.js";
 import { extractStepsFromD2 } from "../story/d2-extractor.js";
-import { buildHtml } from "./builder.js";
+import { buildHtml, type RuntimeScript } from "./builder.js";
 
 const program = new Command();
 program.name("diascope").description("D2 diagram story tools").version("0.1.0");
+const require = createRequire(import.meta.url);
+const __dir = dirname(fileURLToPath(import.meta.url));
+const DEFAULT_VIEWER_BUNDLE = resolve(__dir, "../diascope.standalone.js");
+const DEFAULT_SVG_PAN_ZOOM_BUNDLE = require.resolve("svg-pan-zoom/dist/svg-pan-zoom.min.js");
 
 // ── build ─────────────────────────────────────────────────────────────────────
 program
@@ -40,9 +46,9 @@ program
     warnMissingNodeIds(story, svgContent);
 
     // Build HTML
-    const viewerBundlePath = opts.viewerBundle
-      ?? "https://cdn.jsdelivr.net/npm/diascope/dist/diascope.bundle.js";
-    const html = buildHtml(svgContent, story, { viewerBundlePath });
+    const viewerRuntime = resolveRuntimeScript(opts.viewerBundle ?? DEFAULT_VIEWER_BUNDLE);
+    const svgPanZoomRuntime = resolveRuntimeScript(DEFAULT_SVG_PAN_ZOOM_BUNDLE);
+    const html = buildHtml(svgContent, story, { viewerRuntime, svgPanZoomRuntime });
 
     const outPath = opts.out
       ?? resolve(dirname(storyAbs), basename(storyAbs, extname(storyAbs)) + ".html");
@@ -111,6 +117,13 @@ program
   });
 
 program.parse();
+
+function resolveRuntimeScript(pathOrUrl: string): RuntimeScript {
+  if (/^https?:\/\//.test(pathOrUrl)) {
+    return { type: "external", value: pathOrUrl };
+  }
+  return { type: "inline", value: readFileSync(resolve(pathOrUrl), "utf8") };
+}
 
 function warnMissingNodeIds(story: ReturnType<typeof parseStoryFile>, svgContent: string): void {
   const allNodes = story.steps.flatMap((s) => s.nodes ?? []);

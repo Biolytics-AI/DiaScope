@@ -7,3 +7,12 @@ await esbuild.build({
   outfile: "dist/diascope.bundle.js",
   platform: "browser",
 });
+
+await esbuild.build({
+  entryPoints: ["src/viewer/index.ts"],
+  bundle: true,
+  format: "iife",
+  globalName: "DiaScopeBundle",
+  outfile: "dist/diascope.standalone.js",
+  platform: "browser",
+});

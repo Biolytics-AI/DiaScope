@@ -54,12 +54,17 @@
   </div>
   <div id="edge-tooltip"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
-  <script type="module">
-    import { DiaScopeViewer } from "{{VIEWER_BUNDLE_PATH}}";
+  {{SVG_PAN_ZOOM_SCRIPT_TAG}}
+  {{VIEWER_RUNTIME_SCRIPT_TAG}}
+  <script>
     const config = {{VIEWER_CONFIG_JSON}};
-    const viewer = new DiaScopeViewer({ ...config, autoBindControls: true });
-    viewer.init();
+    const ViewerCtor = window.DiaScopeBundle?.DiaScopeViewer ?? window.DiaScopeViewer;
+    if (!ViewerCtor) {
+      console.error("DiaScope viewer bundle did not expose a browser-global viewer constructor.");
+    } else {
+      const viewer = new ViewerCtor({ ...config, autoBindControls: true });
+      viewer.init();
+    }
   </script>
 </body>
 </html>

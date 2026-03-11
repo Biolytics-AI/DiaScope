@@ -9,7 +9,13 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_PATH = join(__dir, "../../templates/story.html");
 
 export interface BuildOptions {
-  viewerBundlePath: string;
+  viewerRuntime: RuntimeScript;
+  svgPanZoomRuntime: RuntimeScript;
+}
+
+export interface RuntimeScript {
+  type: "inline" | "external";
+  value: string;
 }
 
 export function buildHtml(
@@ -32,10 +38,26 @@ export function buildHtml(
     .replace("{{META_TITLE}}", escapeHtml(title))
     .replace("{{SVG_CONTENT}}", svgContent)
     .replace("{{STEP_BUTTONS}}", stepButtons)
-    .replace("{{VIEWER_BUNDLE_PATH}}", options.viewerBundlePath)
+    .replace("{{SVG_PAN_ZOOM_SCRIPT_TAG}}", renderScriptTag(options.svgPanZoomRuntime))
+    .replace("{{VIEWER_RUNTIME_SCRIPT_TAG}}", renderScriptTag(options.viewerRuntime))
     .replace("{{VIEWER_CONFIG_JSON}}", JSON.stringify(viewerOptions, null, 2));
 }
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function renderScriptTag(runtime: RuntimeScript): string {
+  if (runtime.type === "external") {
+    return `<script src="${escapeAttribute(runtime.value)}"></script>`;
+  }
+  return `<script>${escapeInlineScript(runtime.value)}</script>`;
+}
+
+function escapeAttribute(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+}
+
+function escapeInlineScript(s: string): string {
+  return s.replace(/<\/script/gi, "<\\/script");
 }
