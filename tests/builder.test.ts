@@ -75,4 +75,14 @@ describe("buildHtml", () => {
     expect(html).toContain("window.DiaScopeBundle?.DiaScopeViewer");
     expect(html).not.toContain('import { DiaScopeViewer }');
   });
+
+  it("renders a fullscreen control in the shared viewer toolbar", () => {
+    const html = buildHtml("<svg/>", story, {
+      viewerRuntime: { type: "inline", value: inlineViewerRuntime },
+      svgPanZoomRuntime: { type: "inline", value: inlineSvgPanZoomRuntime },
+    });
+
+    expect(html).toContain('id="btn-fullscreen"');
+    expect(html).toContain("Fullscreen");
+  });
 });

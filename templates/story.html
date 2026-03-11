@@ -6,8 +6,9 @@
   <title>{{META_TITLE}}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { display: flex; height: 100vh; font-family: system-ui, sans-serif; background: #0f1117; color: #e2e8f0; }
-    #canvas-wrap { flex: 1; position: relative; overflow: hidden; }
+    body { height: 100vh; font-family: system-ui, sans-serif; background: #0f1117; color: #e2e8f0; }
+    #story-shell { display: flex; height: 100vh; }
+    #canvas-wrap { flex: 1; position: relative; overflow: hidden; min-width: 0; }
     #svg-host { width: 100%; height: 100%; }
     #svg-host svg { display: block; }
     #panel { width: 320px; display: flex; flex-direction: column; border-left: 1px solid #2d3748; background: #161b27; }
@@ -18,9 +19,17 @@
     #step-tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #4a90d9; margin-bottom: 6px; }
     #step-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
     #step-body { font-size: 13px; color: #a0aec0; line-height: 1.6; }
-    #toolbar { display: flex; gap: 6px; padding: 10px 12px; border-top: 1px solid #2d3748; }
-    #toolbar button { flex: 1; padding: 5px 0; border-radius: 4px; border: 1px solid #4a5568; background: transparent; color: #a0aec0; cursor: pointer; font-size: 11px; }
+    #toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-top: 1px solid #2d3748; }
+    #toolbar button { flex: 1 1 calc(50% - 3px); padding: 5px 0; border-radius: 4px; border: 1px solid #4a5568; background: transparent; color: #a0aec0; cursor: pointer; font-size: 11px; }
     #toolbar button:hover { background: #2d3748; }
+    #story-shell:fullscreen { width: 100vw; height: 100vh; }
+    #story-shell:fullscreen #panel { width: min(420px, 34vw); }
+    @media (max-width: 900px) {
+      #story-shell { flex-direction: column; }
+      #canvas-wrap { min-height: 52vh; }
+      #panel { width: 100%; border-left: 0; border-top: 1px solid #2d3748; min-height: 48vh; }
+      #toolbar button { flex-basis: calc(33.333% - 4px); }
+    }
     #detail-drawer { position: absolute; right: 0; top: 0; width: 280px; height: 100%; background: #1a202c; border-left: 1px solid #2d3748; padding: 16px; transform: translateX(100%); transition: transform 0.2s; overflow-y: auto; z-index: 10; }
     #detail-drawer.open { transform: translateX(0); }
     #drawer-node-id { font-size: 11px; color: #4a90d9; margin-bottom: 8px; font-family: monospace; }
@@ -31,25 +40,28 @@
   </style>
 </head>
 <body>
-  <div id="canvas-wrap">
-    <div id="svg-host">{{SVG_CONTENT}}</div>
-    <div id="detail-drawer">
-      <div id="drawer-node-id"></div>
-      <div id="drawer-body"></div>
+  <div id="story-shell">
+    <div id="canvas-wrap">
+      <div id="svg-host">{{SVG_CONTENT}}</div>
+      <div id="detail-drawer">
+        <div id="drawer-node-id"></div>
+        <div id="drawer-body"></div>
+      </div>
     </div>
-  </div>
-  <div id="panel">
-    <div id="step-nav">{{STEP_BUTTONS}}</div>
-    <div id="step-content">
-      <div id="step-tag"></div>
-      <div id="step-title"></div>
-      <div id="step-body"></div>
-    </div>
-    <div id="toolbar">
-      <button id="btn-prev">← Prev</button>
-      <button id="btn-next">Next →</button>
-      <button id="btn-focus" title="Toggle focus mode">● Focus</button>
-      <button id="btn-fit">Fit</button>
+    <div id="panel">
+      <div id="step-nav">{{STEP_BUTTONS}}</div>
+      <div id="step-content">
+        <div id="step-tag"></div>
+        <div id="step-title"></div>
+        <div id="step-body"></div>
+      </div>
+      <div id="toolbar">
+        <button id="btn-prev">← Prev</button>
+        <button id="btn-next">Next →</button>
+        <button id="btn-focus" title="Toggle focus mode">● Focus</button>
+        <button id="btn-fit">Fit</button>
+        <button id="btn-fullscreen" title="Expand the whole story viewer to fullscreen">Fullscreen</button>
+      </div>
     </div>
   </div>
   <div id="edge-tooltip"></div>

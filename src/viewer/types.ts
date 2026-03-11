@@ -21,6 +21,7 @@ export interface ViewerSelectors {
   nextBtn?: string;
   focusBtn?: string;
   fitBtn?: string;
+  fullscreenBtn?: string;
   zoomInBtn?: string;
   zoomOutBtn?: string;
   detailDrawer?: string;
