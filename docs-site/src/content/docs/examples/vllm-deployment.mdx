@@ -59,3 +59,21 @@ examples/
 - The docs site serves public copies from `docs-site/public/examples/vllm/`.
 - The diagram is intentionally dense because the legal and control boundary is the real subject of the walkthrough.
 - The story file narrows that density into sequential beats for non-engineering review.
+
+## Recreate this workflow with Claude Code or Codex
+
+This example is also a good model for agent-assisted authoring. After installing the DiaScope skill into Claude Code or Codex, you can ask for the same kind of artifact directly:
+
+```text
+Use the narrate skill to create a compliance-focused DiaScope walkthrough for our external AI processing flow.
+```
+
+```text
+Create a buyer-facing diagram story like the vLLM example, but for our own deployment and control boundaries.
+```
+
+```text
+Revise the narration in examples/vLLM/deployment.story.yaml to be shorter and more executive-friendly, then rebuild the HTML.
+```
+
+The agent workflow is documented in [AI Agents](/guides/ai-agents/).

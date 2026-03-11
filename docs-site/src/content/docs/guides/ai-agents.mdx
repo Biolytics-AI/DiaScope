@@ -1,0 +1,125 @@
+---
+title: AI Agents
+description: Install DiaScope into Claude Code or Codex and use the narrate skill to generate interactive diagram stories.
+---
+
+DiaScope ships with a `narrate` skill that lets an agent inspect code, write a focused D2 diagram, generate the `.story.yaml` sidecar, and build the final `.html` walkthrough for you.
+
+This is the shortest path when you already know what flow you want to explain but do not want to hand-author the first draft.
+
+## What the agent workflow produces
+
+For a target like `auth-flow`, the agent should leave you with:
+
+- `auth-flow.d2`
+- `auth-flow.story.yaml`
+- `auth-flow.html`
+
+The `.d2` and `.story.yaml` are the canonical source files. The `.html` is the shareable output.
+
+## Install for Claude Code
+
+```bash
+git clone https://github.com/Biolytics-AI/DiaScope.git ~/.claude/diascope
+mkdir -p ~/.agents/skills
+ln -s ~/.claude/diascope/skills ~/.agents/skills/diascope
+npm install -g diascope
+```
+
+Then restart Claude Code.
+
+Verify:
+
+```bash
+ls -la ~/.agents/skills/diascope
+```
+
+You should see a symlink pointing at `~/.claude/diascope/skills`.
+
+## Install for Codex
+
+Fastest path:
+
+```text
+Fetch and follow instructions from https://raw.githubusercontent.com/Biolytics-AI/DiaScope/main/.codex/INSTALL.md
+```
+
+Manual install:
+
+```bash
+git clone https://github.com/Biolytics-AI/DiaScope.git ~/.codex/diascope
+mkdir -p ~/.agents/skills
+ln -s ~/.codex/diascope/skills ~/.agents/skills/diascope
+npm install -g diascope
+```
+
+Then restart Codex.
+
+## How to ask for a diagram story
+
+The `narrate` skill works best when you give it:
+
+- a concrete folder, file set, or subsystem
+- the audience for the walkthrough
+- the level of scope you want, for example happy path vs full lifecycle
+
+Good prompts:
+
+```text
+Narrate the authentication flow in src/auth/ for a new backend engineer.
+```
+
+```text
+Create a DiaScope story for how the sync engine works, focused on the happy path.
+```
+
+```text
+Explain the request lifecycle in this repo as an interactive diagram for a customer-facing walkthrough.
+```
+
+```text
+Use the narrate skill to create a compliance-focused walkthrough like the vLLM example, but for our billing pipeline.
+```
+
+## What the narrate skill does
+
+The skill guides the agent through a repeatable workflow:
+
+1. Read the target code and identify the components and flow that matter.
+2. Write a focused `.d2` diagram with stable node names.
+3. Add `# @step` annotations when they help scaffold the story structure.
+4. Generate or refine the `.story.yaml` narration.
+5. Run `diascope build` to produce a self-contained `.html` walkthrough.
+
+That means you can use the agent for both first-draft creation and later maintenance of an existing story.
+
+## Best practices for agent prompts
+
+- Scope the request narrowly. "Narrate `src/payments/`" is better than "explain the whole repo."
+- Tell the agent who the audience is. The narration changes a lot between engineers, legal reviewers, and buyers.
+- Tell it what to optimize for: happy path, error handling, control boundaries, performance, or onboarding.
+- Ask it to revise the `.story.yaml` when the diagram is already correct and only the walkthrough needs work.
+
+## Using an agent on an existing DiaScope example
+
+Agents are also useful after the first draft exists.
+
+You can ask for edits like:
+
+```text
+Update examples/vLLM/deployment.story.yaml so the narration is shorter and more buyer-facing, then rebuild the HTML.
+```
+
+```text
+Expand the walkthrough to include one extra step about audit evidence, but keep the existing node IDs intact.
+```
+
+```text
+Refactor the diagram labels in examples/vLLM/deployment.d2 and then fix the story file so all node references still match.
+```
+
+## Next reading
+
+- [Getting Started](/getting-started/)
+- [Authoring Stories](/guides/authoring-stories/)
+- [vLLM Deployment Example](/examples/vllm-deployment/)

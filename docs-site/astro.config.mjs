@@ -44,6 +44,7 @@ export default defineConfig({
 					items: [
 						{ label: 'Overview', slug: '' },
 						{ label: 'Getting Started', slug: 'getting-started' },
+						{ label: 'AI Agents', slug: 'guides/ai-agents' },
 						{ label: 'Authoring Stories', slug: 'guides/authoring-stories' },
 					],
 				},
