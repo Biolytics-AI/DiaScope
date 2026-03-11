@@ -1,6 +1,17 @@
 import { applyHighlight, autoZoom, type HighlightContext } from "./highlight.js";
 import type { Step } from "./types.js";
 
+/**
+ * Convert plain-text body (YAML block scalar) to HTML paragraphs.
+ * If the string already contains HTML tags, it is returned as-is.
+ * Double newlines become paragraph breaks; single newlines become spaces.
+ */
+export function renderBody(text: string): string {
+  if (!text) return "";
+  if (/<[a-z][\s\S]*>/i.test(text)) return text; // already HTML
+  return "<p>" + text.trim().split(/\n{2,}/).map(p => p.trim().replace(/\n/g, " ")).join("</p><p>") + "</p>";
+}
+
 export interface NavigationContext extends HighlightContext {
   selectors: { stepButtons: string; stepTag: string; stepTitle: string; stepBody: string; prevBtn: string; nextBtn: string; focusBtn: string };
   stepTagEl: HTMLElement | null;
@@ -42,7 +53,7 @@ export function goStep(viewer: NavigationContext, idx: number, btn: Element | nu
 
   if (viewer.stepTagEl) viewer.stepTagEl.textContent = step.tag ?? "";
   if (viewer.stepTitleEl) viewer.stepTitleEl.textContent = step.title ?? "";
-  if (viewer.stepBodyEl) viewer.stepBodyEl.innerHTML = step.body ?? "";
+  if (viewer.stepBodyEl) viewer.stepBodyEl.innerHTML = renderBody(step.body ?? "");
 
   viewer.hideTransientUI();
   applyHighlight(viewer, step.nodes ?? []);

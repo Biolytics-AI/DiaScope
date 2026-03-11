@@ -43,10 +43,19 @@ export function parseStoryFile(content: string): StoryFile {
     };
   }
 
+  let meta: StoryFile["meta"] | undefined;
+  if (typeof raw["meta"] === "object" && raw["meta"] !== null) {
+    const m = raw["meta"] as Record<string, unknown>;
+    meta = {
+      title: typeof m["title"] === "string" ? m["title"] : undefined,
+      description: typeof m["description"] === "string" ? m["description"] : undefined,
+      d2_source: typeof m["d2_source"] === "string" ? m["d2_source"] : undefined,
+      d2_theme: typeof m["d2_theme"] === "number" ? m["d2_theme"] : undefined,
+    };
+  }
+
   return {
-    meta: typeof raw["meta"] === "object" && raw["meta"] !== null
-      ? (raw["meta"] as StoryFile["meta"])
-      : undefined,
+    meta,
     overview,
     steps,
     detail_panels:

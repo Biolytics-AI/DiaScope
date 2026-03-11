@@ -1,5 +1,5 @@
 import { applyHighlight } from "./highlight.js";
-import { goStep, toggleFocus, resetOverview, bindKeyboard } from "./navigation.js";
+import { goStep, toggleFocus, resetOverview, bindKeyboard, renderBody } from "./navigation.js";
 import { tagNodes, tagEdges, setupEdgeTooltips } from "./tagging.js";
 import type { Step, ViewerOptions, ViewerSelectors, SvgPanZoom } from "./types.js";
 
@@ -66,6 +66,7 @@ export class DiaScopeViewer {
   readonly exposeGlobals: boolean;
   readonly autoBindControls: boolean;
   readonly expandable: boolean;
+  readonly minInitialZoom: number | undefined;
   readonly narrowBreakpoint: number;
   readonly overview: ViewerOptions['overview'];
   private narrowObserver: ResizeObserver | null = null;
@@ -88,6 +89,7 @@ export class DiaScopeViewer {
     this.exposeGlobals = options.exposeGlobals ?? true;
     this.autoBindControls = options.autoBindControls ?? false;
     this.expandable = options.expandable ?? false;
+    this.minInitialZoom = options.minInitialZoom;
     this.narrowBreakpoint = options.narrowBreakpoint ?? 640;
     this.overview = options.overview;
     this.svgPanZoomImpl = options.svgPanZoom ?? (typeof window !== "undefined" ? (window as Window & { svgPanZoom?: (svg: SVGElement, opts: Record<string, unknown>) => SvgPanZoom }).svgPanZoom : undefined);
@@ -118,6 +120,15 @@ export class DiaScopeViewer {
     this.hideEdgeTooltip();
   }
 
+  /** After pz.fit(), if the resulting zoom is below minInitialZoom, zoom up to it. */
+  private applyMinInitialZoom(): void {
+    if (this.minInitialZoom === undefined || !this.pz) return;
+    if (this.pz.getZoom() < this.minInitialZoom) {
+      this.pz.zoom(this.minInitialZoom);
+      this.pz.center();
+    }
+  }
+
   /**
    * Activate the "All" overview: clears all highlights, fits the diagram, and updates the panel.
    * Called when the user clicks the "All" pill or navigates past a step boundary.
@@ -136,7 +147,7 @@ export class DiaScopeViewer {
     const hasContent = !!(this.overview?.title || this.overview?.body);
     if (this.stepTagEl) this.stepTagEl.textContent = "";
     if (this.stepTitleEl) this.stepTitleEl.textContent = this.overview?.title ?? "";
-    if (this.stepBodyEl) this.stepBodyEl.innerHTML = this.overview?.body ?? "";
+    if (this.stepBodyEl) this.stepBodyEl.innerHTML = renderBody(this.overview?.body ?? "");
 
     // overview-mode hides step-content and toolbar, leaving only the step nav visible
     this.getStoryShell()?.classList.toggle("overview-mode", !hasContent);
@@ -145,6 +156,7 @@ export class DiaScopeViewer {
     applyHighlight(this, []);
     this.pz?.fit();
     this.pz?.center();
+    this.applyMinInitialZoom();
 
     // Disable Prev when overview is first (leftmost); Prev enabled when position=last
     const overviewAtFirst = this.overview?.position !== 'last';
@@ -292,6 +304,7 @@ export class DiaScopeViewer {
       zoomScaleSensitivity: 0.3,
       ...this.panZoomOptions,
     });
+    this.applyMinInitialZoom();
 
     tagNodes(this);
     tagEdges(this);

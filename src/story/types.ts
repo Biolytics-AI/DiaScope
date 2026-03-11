@@ -57,6 +57,13 @@ export interface StoryMeta {
   description?: string;
   /** Path to the .d2 source file, relative to this .story.yaml */
   d2_source?: string;
+  /**
+   * D2 theme ID passed to `d2 --theme <n>` when building.
+   * DiaScope's viewer is dark, so a dark theme is recommended.
+   * Common dark themes: 200 (Dark Mauve), 300 (Dark Terminal).
+   * Can be overridden at build time with `diascope build --theme <n>`.
+   */
+  d2_theme?: number;
 }
 
 export interface StoryStep {

@@ -24,23 +24,30 @@ program
   .description("Render a D2 diagram + story sidecar into a self-contained HTML file")
   .option("-o, --out <file>", "Output HTML file (default: <story-basename>.html)")
   .option("--viewer-bundle <path>", "Path or URL to viewer bundle JS")
-  .action((d2Path: string, storyPath: string, opts: { out?: string; viewerBundle?: string }) => {
+  .option("--theme <n>", "D2 theme ID (overrides meta.d2_theme). Dark themes: 200, 300. Default: story meta or D2 default (0).")
+  .action((d2Path: string, storyPath: string, opts: { out?: string; viewerBundle?: string; theme?: string }) => {
     const d2Abs = resolve(d2Path);
     const storyAbs = resolve(storyPath);
+
+    // Parse story first so we can read meta.d2_theme
+    const storyContent = readFileSync(storyAbs, "utf8");
+    const story = parseStoryFile(storyContent);
+
+    // Resolve theme: CLI flag > story meta > D2 default (omit flag entirely)
+    const themeId = opts.theme !== undefined ? parseInt(opts.theme, 10)
+      : story.meta?.d2_theme !== undefined ? story.meta.d2_theme
+      : undefined;
+    const themeFlag = themeId !== undefined ? ` --theme ${themeId}` : "";
 
     // Render D2 → SVG via CLI
     const svgTmp = join(tmpdir(), `diascope-${Date.now()}.svg`);
     try {
-      execSync(`d2 "${d2Abs}" "${svgTmp}"`, { stdio: "pipe" });
+      execSync(`d2${themeFlag} "${d2Abs}" "${svgTmp}"`, { stdio: "pipe" });
     } catch (e) {
       console.error("d2 render failed:", (e as Error).message);
       process.exit(1);
     }
     const svgContent = readFileSync(svgTmp, "utf8");
-
-    // Parse story
-    const storyContent = readFileSync(storyAbs, "utf8");
-    const story = parseStoryFile(storyContent);
 
     // Warn about node IDs not found in SVG
     warnMissingNodeIds(story, svgContent);

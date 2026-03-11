@@ -1,6 +1,7 @@
 meta:
   title: "Compliant GPU Blueprint"
   d2_source: deployment.d2
+  d2_theme: 200
 
 detail_panels:
   HealthcareProvider.Controls.ClientAuth: |

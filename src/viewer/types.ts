@@ -51,6 +51,17 @@ export interface ViewerOptions {
   /** Show a pop-out button in the top-right corner of the canvas. Useful when embedded via iframe. */
   expandable?: boolean;
   /**
+   * Minimum zoom level after a fit-to-canvas operation.
+   * When `fit()` would produce a zoom below this value, the viewer zooms to this level instead
+   * (centering the diagram), ensuring text remains legible at the cost of showing only part of
+   * the diagram. Useful for large or wide diagrams embedded in constrained spaces.
+   *
+   * Zoom is relative to the SVG's native size (1.0 = 100% of SVG native size).
+   * Can also be set at runtime as a URL param: `?minInitialZoom=0.5`.
+   * Default: undefined (no minimum — always fit the full diagram).
+   */
+  minInitialZoom?: number;
+  /**
    * Width (px) below which the layout switches to narrow (stacked) mode via ResizeObserver.
    * Defaults to 640. Set to 0 to disable.
    */
