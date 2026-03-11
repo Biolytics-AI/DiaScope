@@ -1,19 +1,19 @@
 ---
 title: vLLM Deployment
-description: A compliance-first DiaScope example for reviewing external GPU processing outside HealthcareProvider's current hosting boundary.
+description: A compliance-first DiaScope example for reviewing external GPU processing outside a healthcare provider's current hosting boundary.
 ---
 
-This example is designed for healthcare buyers, legal reviewers, compliance stakeholders, and information security teams. It uses DiaScope to walk through a blueprint for compliant GPU-backed AI processing when clinical context leaves HealthcareProvider's current hosting environment.
+This example is designed for healthcare buyers, legal reviewers, compliance stakeholders, and information security teams. It uses DiaScope to walk through a blueprint for compliant GPU-backed AI processing when clinical context leaves a healthcare provider's current hosting environment.
 
 It is intentionally not a deep engineering tutorial. The story starts at the outbound boundary where externally hosted processing begins, then works outward into responsibility split, provider prerequisites, rented-GPU safeguards, and reviewable evidence.
 
 ## Why this example exists
 
-HealthcareProvider wants to use AI for administrative support around EHR workflows. That means clinical context may need to reach infrastructure outside its current hosting environment.
+A healthcare provider wants to use AI for administrative support around EHR workflows. That means clinical context may need to reach infrastructure outside its current hosting environment.
 
 This introduces three parties with different responsibilities:
 
-- HealthcareProvider as the controller of the EHR context and use case
+- The healthcare provider as the controller of the EHR context and use case
 - Biolytics AI as the implementation partner operating the external processing layer
 - The GPU host as the infrastructure provider or sub-processor
 
@@ -36,7 +36,7 @@ The example uses the rented-GPU / self-managed deployment model as the reference
 
 ## What the walkthrough covers
 
-1. Where HealthcareProvider-controlled context leaves the current hosting boundary.
+1. Where provider-controlled context leaves the current hosting boundary.
 2. Which controller-side decisions and identities must be in place before that handoff.
 3. How responsibilities split between controller, implementation partner, and GPU provider.
 4. Which legal and evidence prerequisites must exist before a provider can be onboarded.

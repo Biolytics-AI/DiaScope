@@ -12,7 +12,7 @@ style: {
   font-color: "#0B1220"
 }
 
-# Canonical blueprint for PHI-capable GPU processing outside HealthcareProvider's current hosting.
+# Canonical blueprint for PHI-capable GPU processing outside a healthcare provider's current hosting.
 # Visual system translated from the Biolytics AI landing page light theme.
 # Exact brand font matching is a render-time concern in D2 rather than a portable source-level setting.
 
@@ -45,7 +45,7 @@ classes: {
   }
 }
 
-HealthcareProvider: "HealthcareProvider EHR Environment" {
+HealthcareProvider: "Healthcare Provider Environment" {
   direction: down
   style: {
     fill: "#F8FDFF"
@@ -108,7 +108,7 @@ HealthcareProvider: "HealthcareProvider EHR Environment" {
     }
   }
 
-  Controls: "HealthcareProvider Controls" {
+  Controls: "Provider Controls" {
     direction: right
     style: {
       fill: "#FFFFFF"
@@ -165,7 +165,7 @@ Biolytics: "Biolytics-Managed External Processing" {
       font-color: "#002451"
     }
 
-    Ingress: "Security Group / Allowlist\n(HealthcareProvider endpoints only)" {
+    Ingress: "Security Group / Allowlist\n(approved client endpoints only)" {
       shape: hexagon
       style: {
         fill: "#ECFCFD"

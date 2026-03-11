@@ -32,6 +32,7 @@ export default defineConfig({
 			],
 			components: {
 				Footer: './src/components/Footer.astro',
+				SiteTitle: './src/components/SiteTitle.astro',
 			},
 			social: [
 				{ icon: 'github', label: 'DiaScope on GitHub', href: 'https://github.com/Biolytics-AI/DiaScope' },

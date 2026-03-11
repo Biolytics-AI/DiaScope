@@ -1,7 +1,7 @@
 # External GPU Processing Compliance Blueprint
 
 This example shows how DiaScope can present a compliance-first walkthrough for AI
-processing that takes clinical context outside HealthcareProvider's current hosting
+processing that takes clinical context outside a healthcare provider's current hosting
 environment.
 
 The intended audience is not primarily engineers. It is aimed at healthcare
@@ -11,7 +11,7 @@ like.
 
 ## Scenario
 
-- HealthcareProvider is the EHR controller serving healthcare institutions.
+- A healthcare provider is the EHR controller serving healthcare institutions.
 - Biolytics AI provides the external AI processing layer and related safeguards.
 - A third-party GPU host provides the underlying infrastructure or managed
   inference capability.

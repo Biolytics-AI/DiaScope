@@ -4,10 +4,10 @@ meta:
 
 detail_panels:
   HealthcareProvider.Controls.ClientAuth: |
-    <p>This is the last HealthcareProvider-controlled gate before clinical context leaves the current hosting boundary.</p>
+    <p>This is the last provider-controlled gate before clinical context leaves the current hosting boundary.</p>
     <p>It matters because the outbound call defines the point where external processing, contractual scope, and evidence requirements begin.</p>
   Biolytics.Runtime.Ingress: |
-    <p>The external processing environment should only accept traffic from explicitly allowlisted HealthcareProvider endpoints.</p>
+    <p>The external processing environment should only accept traffic from explicitly allowlisted client endpoints.</p>
   GPUProvider.EURegion: |
     <p>Region locking and residency evidence are prerequisites, not optional deployment preferences.</p>
   Audit.ProviderEvidence: |
@@ -24,7 +24,7 @@ steps:
     title: "Start at the boundary where external processing begins"
     body: |
       The key compliance question is not "where is the model?" but "where does
-      HealthcareProvider-controlled clinical context leave its current environment?" That
+      provider-controlled clinical context leave its current environment?" That
       happens at the authenticated handoff into the external processing enclave.
       From this point onward, the deployment needs a processor-grade control model,
       not just an engineering diagram.
@@ -35,9 +35,9 @@ steps:
 
   - id: controller-side-gates
     tag: "02"
-    title: "HealthcareProvider must decide what is allowed to cross that boundary"
+    title: "The healthcare provider must decide what is allowed to cross that boundary"
     body: |
-      Before any request leaves the EHR environment, HealthcareProvider still owns the
+      Before any request leaves the EHR environment, the healthcare provider still owns the
       authorization decision and the outbound identity used for the call. This is
       where use of AI assistance must be explicitly permitted and constrained. If
       minimisation, authorization, or caller authentication are weak here, nothing
@@ -51,7 +51,7 @@ steps:
     tag: "03"
     title: "The blueprint is really a split of responsibilities"
     body: |
-      HealthcareProvider remains the controller because the processing serves its EHR
+      The healthcare provider remains the controller because the processing serves its EHR
       workflows and patient context. Biolytics operates the external application
       layer and therefore has to implement processor-grade safeguards. The GPU
       hosting company remains a sub-processor or infrastructure party whose claims
@@ -83,7 +83,7 @@ steps:
     body: |
       This example treats the self-managed GPU model as the reference architecture
       because it shows the safeguards that must exist when more of the stack is in
-      your own beheer. The external runtime needs controlled ingress, controlled
+      your own operational scope. The external runtime needs controlled ingress, controlled
       operations access, encrypted storage, model provenance, and PHI-safe audit
       logging. The Biolytics solution should be judged against this same control
       baseline, even if its product behavior sits above the raw inference layer.
@@ -100,7 +100,7 @@ steps:
     tag: "06"
     title: "The response returns, but oversight stays with the controller"
     body: |
-      A compliant setup does not end when the model returns an answer. HealthcareProvider
+      A compliant setup does not end when the model returns an answer. The healthcare provider
       still needs evidence it can review: application audit logs, infrastructure
       access trails, deployment provenance, key rotation records, and the provider
       evidence pack. That is the practical point of the blueprint: to align all
