@@ -1,5 +1,5 @@
 import yaml from "js-yaml";
-import type { StoryFile, StoryStep } from "./types.js";
+import type { StoryFile, StoryOverview, StoryStep } from "./types.js";
 
 export function parseStoryFile(content: string): StoryFile {
   const raw = yaml.load(content) as Record<string, unknown>;
@@ -33,10 +33,21 @@ export function parseStoryFile(content: string): StoryFile {
     };
   });
 
+  let overview: StoryOverview | undefined;
+  if (typeof raw["overview"] === "object" && raw["overview"] !== null) {
+    const ov = raw["overview"] as Record<string, unknown>;
+    overview = {
+      position: ov["position"] === "last" ? "last" : "first",
+      title: typeof ov["title"] === "string" ? ov["title"] : undefined,
+      body: typeof ov["body"] === "string" ? ov["body"] : undefined,
+    };
+  }
+
   return {
     meta: typeof raw["meta"] === "object" && raw["meta"] !== null
       ? (raw["meta"] as StoryFile["meta"])
       : undefined,
+    overview,
     steps,
     detail_panels:
       typeof raw["detail_panels"] === "object" && raw["detail_panels"] !== null

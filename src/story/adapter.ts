@@ -16,5 +16,8 @@ export function storyToViewerOptions(story: StoryFile): ViewerOptions {
     nodeIds: Array.from(nodeIdSet),
     detailPanels: story.detail_panels,
     edgeTooltips: story.edge_tooltips,
+    overview: story.overview
+      ? { position: story.overview.position, title: story.overview.title, body: story.overview.body }
+      : undefined,
   };
 }

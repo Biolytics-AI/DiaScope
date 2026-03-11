@@ -24,7 +24,7 @@
     #step-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
     #step-body { font-size: 13px; color: #a0aec0; line-height: 1.6; }
     #toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-top: 1px solid #2d3748; }
-    #toolbar button { flex: 1 1 calc(50% - 3px); padding: 5px 0; border-radius: 4px; border: 1px solid #4a5568; background: transparent; color: #a0aec0; cursor: pointer; font-size: 11px; }
+    #toolbar button { flex: 1; padding: 5px 0; border-radius: 4px; border: 1px solid #4a5568; background: transparent; color: #a0aec0; cursor: pointer; font-size: 11px; }
     #toolbar button:hover { background: #2d3748; }
     #story-shell.panel-collapsed #panel { width: 52px; min-width: 52px; }
     #story-shell.panel-collapsed #step-nav,
@@ -34,7 +34,9 @@
     #story-shell.narrow { flex-direction: column; }
     #story-shell.narrow #canvas-wrap { min-height: 52vh; }
     #story-shell.narrow #panel { width: 100%; border-left: 0; border-top: 1px solid #2d3748; min-height: 48vh; }
-    #story-shell.narrow #toolbar button { flex-basis: calc(33.333% - 4px); }
+    #story-shell.narrow #toolbar button { flex: 1; }
+    #story-shell.overview-mode #step-content,
+    #story-shell.overview-mode #toolbar { display: none; }
     #story-shell.narrow.panel-collapsed #panel { width: 100%; min-width: 0; min-height: 52px; }
     #btn-expand { position: absolute; top: 10px; right: 10px; z-index: 20; width: 28px; height: 28px; border-radius: 999px; border: 1px solid #4a5568; background: rgba(22,27,39,0.92); color: #a0aec0; cursor: pointer; display: none; align-items: center; justify-content: center; padding: 0; }
     #btn-expand:hover { background: #2d3748; }
@@ -215,7 +217,6 @@
         <button id="btn-prev" type="button">← Prev</button>
         <button id="btn-next" type="button">Next →</button>
         <button id="btn-focus" type="button" title="Toggle focus mode">● Focus</button>
-        <button id="btn-fit" type="button">Fit</button>
       </div>
     </div>
   </div>
@@ -399,10 +400,21 @@ var DiaScopeBundle = (() => {
   // src/viewer/navigation.ts
   function goStep(viewer, idx, btn = null) {
     if (!viewer.steps.length) return;
+    const overviewAtFirst = !!viewer.overview && viewer.overview.position !== "last";
+    const overviewAtLast = !!viewer.overview && viewer.overview.position === "last";
+    if (idx < 0 && overviewAtFirst) {
+      viewer.showOverview();
+      return;
+    }
+    if (idx >= viewer.steps.length && overviewAtLast) {
+      viewer.showOverview();
+      return;
+    }
     const bounded = Math.max(0, Math.min(viewer.steps.length - 1, idx));
     viewer.curStep = bounded;
     const win = viewer.doc.defaultView;
     if (win) win.curStep = bounded;
+    viewer.doc.querySelector("#story-shell")?.classList.remove("overview-mode");
     const step = viewer.steps[bounded];
     viewer.doc.querySelectorAll(viewer.selectors.stepButtons).forEach((b) => b.classList.remove("active"));
     const target = btn ?? viewer.doc.querySelector(`${viewer.selectors.stepButtons}[data-step="${bounded}"]`);
@@ -413,8 +425,8 @@ var DiaScopeBundle = (() => {
     viewer.hideTransientUI();
     applyHighlight(viewer, step.nodes ?? []);
     autoZoom(viewer, step.nodes ?? []);
-    if (viewer.prevBtn) viewer.prevBtn.disabled = bounded === 0;
-    if (viewer.nextBtn) viewer.nextBtn.disabled = bounded === viewer.steps.length - 1;
+    if (viewer.prevBtn) viewer.prevBtn.disabled = bounded === 0 && !overviewAtFirst;
+    if (viewer.nextBtn) viewer.nextBtn.disabled = bounded === viewer.steps.length - 1 && !overviewAtLast;
   }
   function toggleFocus(viewer) {
     viewer.focusMode = !viewer.focusMode;
@@ -439,8 +451,22 @@ var DiaScopeBundle = (() => {
   }
   function bindKeyboard(viewer) {
     viewer.onKeyDown = (e) => {
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") goStep(viewer, viewer.curStep + 1);
-      if (e.key === "ArrowLeft" || e.key === "ArrowUp") goStep(viewer, viewer.curStep - 1);
+      const overviewAtFirst = !!viewer.overview && viewer.overview.position !== "last";
+      const overviewAtLast = !!viewer.overview && viewer.overview.position === "last";
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        if (viewer.curStep === -1) {
+          goStep(viewer, overviewAtFirst ? 0 : viewer.steps.length - 1);
+        } else {
+          goStep(viewer, viewer.curStep + 1);
+        }
+      }
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        if (viewer.curStep === -1) {
+          if (overviewAtLast) goStep(viewer, viewer.steps.length - 1);
+        } else {
+          goStep(viewer, viewer.curStep - 1);
+        }
+      }
     };
     viewer.doc.addEventListener("keydown", viewer.onKeyDown);
   }
@@ -581,6 +607,7 @@ var DiaScopeBundle = (() => {
       this.autoBindControls = options.autoBindControls ?? false;
       this.expandable = options.expandable ?? false;
       this.narrowBreakpoint = options.narrowBreakpoint ?? 640;
+      this.overview = options.overview;
       this.svgPanZoomImpl = options.svgPanZoom ?? (typeof window !== "undefined" ? window.svgPanZoom : void 0);
     }
     getDiagramSvg() {
@@ -602,6 +629,31 @@ var DiaScopeBundle = (() => {
     hideTransientUI() {
       this.hideDetail();
       this.hideEdgeTooltip();
+    }
+    /**
+     * Activate the "All" overview: clears all highlights, fits the diagram, and updates the panel.
+     * Called when the user clicks the "All" pill or navigates past a step boundary.
+     * Only meaningful when `overview` is configured.
+     */
+    showOverview(btn = null) {
+      this.curStep = -1;
+      const win = this.doc.defaultView;
+      if (win) win.curStep = -1;
+      this.doc.querySelectorAll(this.selectors.stepButtons).forEach((b) => b.classList.remove("active"));
+      const allBtn = btn ?? this.doc.querySelector(`${this.selectors.stepButtons}[data-step="all"]`);
+      if (allBtn) allBtn.classList.add("active");
+      const hasContent = !!(this.overview?.title || this.overview?.body);
+      if (this.stepTagEl) this.stepTagEl.textContent = "";
+      if (this.stepTitleEl) this.stepTitleEl.textContent = this.overview?.title ?? "";
+      if (this.stepBodyEl) this.stepBodyEl.innerHTML = this.overview?.body ?? "";
+      this.getStoryShell()?.classList.toggle("overview-mode", !hasContent);
+      this.hideTransientUI();
+      applyHighlight(this, []);
+      this.pz?.fit();
+      this.pz?.center();
+      const overviewAtFirst = this.overview?.position !== "last";
+      if (this.prevBtn) this.prevBtn.disabled = overviewAtFirst;
+      if (this.nextBtn) this.nextBtn.disabled = !overviewAtFirst;
     }
     goStep(idx, btn = null) {
       goStep(this, idx, btn);
@@ -641,7 +693,12 @@ var DiaScopeBundle = (() => {
     bindControls() {
       this.doc.querySelectorAll(this.selectors.stepButtons).forEach((btn) => {
         if (btn.hasAttribute("onclick")) return;
-        const step = parseInt(btn.dataset["step"] ?? "", 10);
+        const stepAttr = btn.dataset["step"] ?? "";
+        if (stepAttr === "all") {
+          if (this.overview) btn.addEventListener("click", () => this.showOverview(btn));
+          return;
+        }
+        const step = parseInt(stepAttr, 10);
         if (isNaN(step)) return;
         btn.addEventListener("click", () => this.goStep(step, btn));
       });
@@ -734,8 +791,12 @@ var DiaScopeBundle = (() => {
       bindKeyboard(this);
       if (this.autoBindControls) this.bindControls();
       this.syncPanelToggleButton();
-      this.goStep(0, this.doc.querySelector(`${this.selectors.stepButtons}[data-step="0"]`));
-      applyHighlight(this, this.steps[0]?.nodes ?? []);
+      if (this.overview && this.overview.position !== "last") {
+        this.showOverview(this.doc.querySelector(`${this.selectors.stepButtons}[data-step="all"]`));
+      } else {
+        this.goStep(0, this.doc.querySelector(`${this.selectors.stepButtons}[data-step="0"]`));
+        applyHighlight(this, this.steps[0]?.nodes ?? []);
+      }
       this.exposeInlineApi();
       if (this.expandable) this.setupExpandButton();
       this.setupNarrowObserver();

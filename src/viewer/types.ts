@@ -55,6 +55,28 @@ export interface ViewerOptions {
    * Defaults to 640. Set to 0 to disable.
    */
   narrowBreakpoint?: number;
+  /**
+   * Optional "All" overview mode that shows the full unfiltered diagram.
+   * When present, an "All" pill is added to the step nav and the Fit button is removed.
+   *
+   * Navigation behaviour:
+   * - `position: 'first'` (default): "All" appears before step 1; viewer starts at All;
+   *   pressing ← from step 1 returns to All.
+   * - `position: 'last'`: "All" appears after the last step; viewer starts at step 1;
+   *   pressing → from the last step advances to All.
+   *
+   * Panel behaviour when All is active:
+   * - If `title` or `body` is set: the narration panel shows the content normally.
+   * - If both are omitted: the panel collapses to nav-only (step-content and toolbar are hidden).
+   */
+  overview?: {
+    /** Where to insert the "All" pill. Defaults to 'first'. */
+    position?: 'first' | 'last';
+    /** Optional headline shown when All is active. */
+    title?: string;
+    /** Optional body text/HTML shown when All is active. */
+    body?: string;
+  };
   document?: Document;
   /** svgPanZoom instance or compatible impl */
   svgPanZoom?: (svg: SVGElement, options: Record<string, unknown>) => SvgPanZoom;

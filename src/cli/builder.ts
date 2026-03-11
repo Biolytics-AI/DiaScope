@@ -27,12 +27,20 @@ export function buildHtml(
   const viewerOptions = storyToViewerOptions(story);
   const title = story.meta?.title ?? "D2 Story";
 
-  const stepButtons = (viewerOptions.steps ?? [])
+  const numberedButtons = (viewerOptions.steps ?? [])
     .map(
       (s, i) =>
         `<button class="step-btn" data-step="${i}">${escapeHtml(s.tag ?? String(i + 1))}</button>`
     )
     .join("\n");
+
+  const overviewButton = viewerOptions.overview
+    ? `<button class="step-btn" data-step="all">All</button>`
+    : "";
+
+  const stepButtons = viewerOptions.overview?.position === 'last'
+    ? [numberedButtons, overviewButton].filter(Boolean).join("\n")
+    : [overviewButton, numberedButtons].filter(Boolean).join("\n");
 
   return template
     .replace("{{META_TITLE}}", escapeHtml(title))

@@ -67,6 +67,7 @@ export class DiaScopeViewer {
   readonly autoBindControls: boolean;
   readonly expandable: boolean;
   readonly narrowBreakpoint: number;
+  readonly overview: ViewerOptions['overview'];
   private narrowObserver: ResizeObserver | null = null;
   private readonly svgPanZoomImpl: ((svg: SVGElement, opts: Record<string, unknown>) => SvgPanZoom) | undefined;
 
@@ -88,6 +89,7 @@ export class DiaScopeViewer {
     this.autoBindControls = options.autoBindControls ?? false;
     this.expandable = options.expandable ?? false;
     this.narrowBreakpoint = options.narrowBreakpoint ?? 640;
+    this.overview = options.overview;
     this.svgPanZoomImpl = options.svgPanZoom ?? (typeof window !== "undefined" ? (window as Window & { svgPanZoom?: (svg: SVGElement, opts: Record<string, unknown>) => SvgPanZoom }).svgPanZoom : undefined);
   }
 
@@ -114,6 +116,40 @@ export class DiaScopeViewer {
   hideTransientUI(): void {
     this.hideDetail();
     this.hideEdgeTooltip();
+  }
+
+  /**
+   * Activate the "All" overview: clears all highlights, fits the diagram, and updates the panel.
+   * Called when the user clicks the "All" pill or navigates past a step boundary.
+   * Only meaningful when `overview` is configured.
+   */
+  showOverview(btn: Element | null = null): void {
+    this.curStep = -1;
+    const win = this.doc.defaultView;
+    if (win) (win as Window & { curStep?: number }).curStep = -1;
+
+    // Mark the "All" pill active, clear all other step buttons
+    this.doc.querySelectorAll(this.selectors.stepButtons).forEach((b) => b.classList.remove("active"));
+    const allBtn = btn ?? this.doc.querySelector(`${this.selectors.stepButtons}[data-step="all"]`);
+    if (allBtn) allBtn.classList.add("active");
+
+    const hasContent = !!(this.overview?.title || this.overview?.body);
+    if (this.stepTagEl) this.stepTagEl.textContent = "";
+    if (this.stepTitleEl) this.stepTitleEl.textContent = this.overview?.title ?? "";
+    if (this.stepBodyEl) this.stepBodyEl.innerHTML = this.overview?.body ?? "";
+
+    // overview-mode hides step-content and toolbar, leaving only the step nav visible
+    this.getStoryShell()?.classList.toggle("overview-mode", !hasContent);
+
+    this.hideTransientUI();
+    applyHighlight(this, []);
+    this.pz?.fit();
+    this.pz?.center();
+
+    // Disable Prev when overview is first (leftmost); Prev enabled when position=last
+    const overviewAtFirst = this.overview?.position !== 'last';
+    if (this.prevBtn) this.prevBtn.disabled = overviewAtFirst;
+    if (this.nextBtn) this.nextBtn.disabled = !overviewAtFirst;
   }
 
   goStep(idx: number, btn: Element | null = null): void {
@@ -162,7 +198,12 @@ export class DiaScopeViewer {
   bindControls(): void {
     this.doc.querySelectorAll(this.selectors.stepButtons).forEach((btn) => {
       if (btn.hasAttribute("onclick")) return;
-      const step = parseInt((btn as HTMLElement & { dataset: DOMStringMap }).dataset["step"] ?? "", 10);
+      const stepAttr = (btn as HTMLElement & { dataset: DOMStringMap }).dataset["step"] ?? "";
+      if (stepAttr === "all") {
+        if (this.overview) btn.addEventListener("click", () => this.showOverview(btn));
+        return;
+      }
+      const step = parseInt(stepAttr, 10);
       if (isNaN(step)) return;
       btn.addEventListener("click", () => this.goStep(step, btn));
     });
@@ -268,8 +309,13 @@ export class DiaScopeViewer {
     if (this.autoBindControls) this.bindControls();
     this.syncPanelToggleButton();
 
-    this.goStep(0, this.doc.querySelector(`${this.selectors.stepButtons}[data-step="0"]`));
-    applyHighlight(this, this.steps[0]?.nodes ?? []);
+    // Start at overview when configured at 'first' position; otherwise start at step 0
+    if (this.overview && this.overview.position !== 'last') {
+      this.showOverview(this.doc.querySelector(`${this.selectors.stepButtons}[data-step="all"]`));
+    } else {
+      this.goStep(0, this.doc.querySelector(`${this.selectors.stepButtons}[data-step="0"]`));
+      applyHighlight(this, this.steps[0]?.nodes ?? []);
+    }
     this.exposeInlineApi();
     if (this.expandable) this.setupExpandButton();
     this.setupNarrowObserver();
