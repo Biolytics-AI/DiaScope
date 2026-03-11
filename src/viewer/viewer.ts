@@ -65,6 +65,7 @@ export class DiaScopeViewer {
   readonly panZoomOptions: Record<string, unknown>;
   readonly exposeGlobals: boolean;
   readonly autoBindControls: boolean;
+  readonly expandable: boolean;
   private readonly svgPanZoomImpl: ((svg: SVGElement, opts: Record<string, unknown>) => SvgPanZoom) | undefined;
 
   constructor(options: ViewerOptions) {
@@ -83,6 +84,7 @@ export class DiaScopeViewer {
     this.panZoomOptions = options.panZoomOptions ?? {};
     this.exposeGlobals = options.exposeGlobals ?? true;
     this.autoBindControls = options.autoBindControls ?? false;
+    this.expandable = options.expandable ?? false;
     this.svgPanZoomImpl = options.svgPanZoom ?? (typeof window !== "undefined" ? (window as Window & { svgPanZoom?: (svg: SVGElement, opts: Record<string, unknown>) => SvgPanZoom }).svgPanZoom : undefined);
   }
 
@@ -266,6 +268,28 @@ export class DiaScopeViewer {
     this.goStep(0, this.doc.querySelector(`${this.selectors.stepButtons}[data-step="0"]`));
     applyHighlight(this, this.steps[0]?.nodes ?? []);
     this.exposeInlineApi();
+    if (this.expandable) this.setupExpandButton();
+  }
+
+  setupExpandButton(): void {
+    if (!this.canvasWrap) return;
+    let btn = this.doc.getElementById("btn-expand") as HTMLButtonElement | null;
+    if (!btn) {
+      btn = this.doc.createElement("button") as HTMLButtonElement;
+      btn.id = "btn-expand";
+      btn.style.cssText = "position:absolute;top:10px;right:10px;z-index:20;width:28px;height:28px;border-radius:999px;border:1px solid #4a5568;background:rgba(22,27,39,0.92);color:#a0aec0;cursor:pointer;padding:0;";
+      this.canvasWrap.appendChild(btn);
+    }
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="9,1 13,1 13,5"/><polyline points="5,13 1,13 1,9"/><line x1="13" y1="1" x2="8" y2="6"/><line x1="1" y1="13" x2="6" y2="8"/></svg>`;
+    btn.title = "Open in full view";
+    btn.setAttribute("aria-label", "Open in full view");
+    btn.style.display = "flex";
+    btn.style.alignItems = "center";
+    btn.style.justifyContent = "center";
+    btn.addEventListener("click", () => {
+      const url = window.location.href.replace(/[?&]expandable=?1?/, "").replace(/\?$/, "");
+      window.open(url, "_blank");
+    });
   }
 
   destroy(): void {

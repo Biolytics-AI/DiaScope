@@ -48,6 +48,8 @@ export interface ViewerOptions {
   panZoomOptions?: Record<string, unknown>;
   exposeGlobals?: boolean;
   autoBindControls?: boolean;
+  /** Show a pop-out button in the top-right corner of the canvas. Useful when embedded via iframe. */
+  expandable?: boolean;
   document?: Document;
   /** svgPanZoom instance or compatible impl */
   svgPanZoom?: (svg: SVGElement, options: Record<string, unknown>) => SvgPanZoom;
