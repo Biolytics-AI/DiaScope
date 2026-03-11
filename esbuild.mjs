@@ -4,6 +4,6 @@ await esbuild.build({
   entryPoints: ["src/viewer/index.ts"],
   bundle: true,
   format: "esm",
-  outfile: "dist/d2-story-viewer.bundle.js",
+  outfile: "dist/diascope.bundle.js",
   platform: "browser",
 });
