@@ -11,14 +11,15 @@
     #canvas-wrap { flex: 1; position: relative; overflow: hidden; min-width: 0; }
     #svg-host { width: 100%; height: 100%; }
     #svg-host svg { display: block; }
-    #panel { width: 320px; display: flex; flex-direction: column; border-left: 1px solid #2d3748; background: #161b27; position: relative; transition: width 0.18s ease; }
+    #panel { width: min(320px, 35%); display: flex; flex-direction: column; border-left: 1px solid #2d3748; background: #161b27; position: relative; transition: width 0.18s ease; }
     #panel-header { display: flex; justify-content: flex-start; padding: 10px 12px 0; }
     #btn-panel-toggle { width: 28px; height: 28px; border-radius: 999px; border: 1px solid #4a5568; background: rgba(22, 27, 39, 0.92); color: #a0aec0; cursor: pointer; font-size: 14px; line-height: 1; }
     #btn-panel-toggle:hover { background: #2d3748; }
     #step-nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 12px; border-bottom: 1px solid #2d3748; }
     .step-btn { padding: 4px 10px; border-radius: 4px; border: 1px solid #4a5568; background: transparent; color: #a0aec0; cursor: pointer; font-size: 12px; }
     .step-btn.active { background: #3182ce; border-color: #3182ce; color: #fff; }
-    #step-content { flex: 1; overflow-y: auto; padding: 16px; }
+    #step-content { flex: 1; overflow-y: auto; padding: 16px; scrollbar-width: none; }
+    #step-content::-webkit-scrollbar { display: none; }
     #step-tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #4a90d9; margin-bottom: 6px; }
     #step-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
     #step-body { font-size: 13px; color: #a0aec0; line-height: 1.6; }
@@ -30,13 +31,11 @@
     #story-shell.panel-collapsed #step-content,
     #story-shell.panel-collapsed #toolbar { display: none; }
     #story-shell.panel-collapsed #panel-header { padding: 12px; }
-    @media (max-width: 900px) {
-      #story-shell { flex-direction: column; }
-      #canvas-wrap { min-height: 52vh; }
-      #panel { width: 100%; border-left: 0; border-top: 1px solid #2d3748; min-height: 48vh; }
-      #toolbar button { flex-basis: calc(33.333% - 4px); }
-      #story-shell.panel-collapsed #panel { width: 100%; min-width: 0; min-height: 52px; }
-    }
+    #story-shell.narrow { flex-direction: column; }
+    #story-shell.narrow #canvas-wrap { min-height: 52vh; }
+    #story-shell.narrow #panel { width: 100%; border-left: 0; border-top: 1px solid #2d3748; min-height: 48vh; }
+    #story-shell.narrow #toolbar button { flex-basis: calc(33.333% - 4px); }
+    #story-shell.narrow.panel-collapsed #panel { width: 100%; min-width: 0; min-height: 52px; }
     #btn-expand { position: absolute; top: 10px; right: 10px; z-index: 20; width: 28px; height: 28px; border-radius: 999px; border: 1px solid #4a5568; background: rgba(22,27,39,0.92); color: #a0aec0; cursor: pointer; display: none; align-items: center; justify-content: center; padding: 0; }
     #btn-expand:hover { background: #2d3748; }
     #detail-drawer { position: absolute; right: 0; top: 0; width: 280px; height: 100%; background: #1a202c; border-left: 1px solid #2d3748; padding: 16px; transform: translateX(100%); transition: transform 0.2s; overflow-y: auto; z-index: 10; }
@@ -96,6 +95,12 @@
     } else {
       const viewer = new ViewerCtor({ ...config, autoBindControls: true });
       viewer.init();
+    }
+    const shell = document.getElementById('story-shell');
+    if (shell && typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(([e]) => {
+        shell.classList.toggle('narrow', e.contentRect.width < 640);
+      }).observe(shell);
     }
   </script>
 </body>
