@@ -350,7 +350,7 @@ export class DiaScopeViewer {
     if (!btn) {
       btn = this.doc.createElement("button") as HTMLButtonElement;
       btn.id = "btn-expand";
-      btn.style.cssText = "position:absolute;top:10px;right:10px;z-index:20;width:28px;height:28px;border-radius:999px;border:1px solid #4a5568;background:rgba(22,27,39,0.92);color:#a0aec0;cursor:pointer;padding:0;";
+      btn.style.cssText = "position:absolute;top:10px;right:10px;z-index:20;width:28px;height:28px;border-radius:999px;border:1px solid #cbd5e0;background:rgba(255,255,255,0.92);color:#4a5568;cursor:pointer;padding:0;";
       this.canvasWrap.appendChild(btn);
     }
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="9,1 13,1 13,5"/><polyline points="5,13 1,13 1,9"/><line x1="13" y1="1" x2="8" y2="6"/><line x1="1" y1="13" x2="6" y2="8"/></svg>`;
