@@ -1,19 +1,37 @@
-# diascope
+# DiaScope
 
-Turn [D2](https://d2lang.com) diagrams into narrated, interactive step-by-step stories — as a CLI that produces self-contained static HTML, or as a JS library you can embed in any page.
+Turn any codebase, system, or flow into a narrated interactive diagram story — a self-contained `.html` file your audience can step through with arrow keys.
+
+You author a [D2](https://d2lang.com) diagram and a YAML narration sidecar. DiaScope renders the diagram, wires up the step-by-step navigation, and writes one file you can open in a browser or share anywhere.
+
+**Or:** install the `narrate` skill and let an agent do it for you.
+
+---
+
+## How it looks
+
+Each story is a full-screen page: diagram on the left, narration panel on the right. Each step highlights the relevant nodes, pans/zooms to them, and shows the title + body text. Click a node for detail. Press `→` to advance.
+
+---
 
 ## Requirements
 
-- Node.js 18+
-- [`d2`](https://d2lang.com/tour/install) on your PATH (for the CLI)
+* Node.js 18+
+* [`d2`](https://d2lang.com/tour/install) on your PATH
 
-## Quick start
+---
+
+## Install
 
 ```bash
 npm install -g diascope
 ```
 
-**1. Add `# @step` annotations to your D2 file** *(optional but recommended)*
+---
+
+## Human-driven workflow
+
+**1. Write your D2 diagram** — and optionally annotate it with `# @step` markers:
 
 ```d2
 # @step step-01
@@ -21,99 +39,127 @@ Client -> Server: POST /api/data
 
 # @step step-02
 Server -> Database: SELECT ...
+
+# @step step-03
+Database -> Server: result row
+Server -> Client: 200 OK
 ```
 
-**2. Scaffold the narration sidecar**
+`# @step` comments are invisible to the D2 renderer. They tell `diascope init` which nodes belong to which narrative beat.
+
+**2. Scaffold the narration:**
 
 ```bash
-diascope init my-diagram.d2
-# → writes my-diagram.story.yaml
+diascope init auth-flow.d2
+# → writes auth-flow.story.yaml
 ```
 
-**3. Edit the sidecar** — fill in titles, body text, any detail panels.
-
-**4. Build the interactive HTML**
-
-```bash
-diascope build my-diagram.d2 my-diagram.story.yaml -o story.html
-# → writes story.html (open in browser, no server needed)
-```
-
----
-
-## Story format
-
-Narration lives in a `.story.yaml` file alongside the `.d2` source. The D2 file is **never modified** by the tooling.
+**3. Fill in the narration** — edit `auth-flow.story.yaml`:
 
 ```yaml
-# my-diagram.story.yaml
 meta:
-  title: "Request Flow"
-  d2_source: my-diagram.d2
+  title: "Auth Flow"
+  d2_source: auth-flow.d2
 
 steps:
   - id: step-01
     tag: "01"
-    title: "Client sends request"
+    title: "Client sends authenticated request"
     body: |
-      The client initiates an HTTP POST to /api/data.
-      Authentication is handled at this boundary.
+      The client attaches a short-lived JWT in the Authorization header.
+      Tokens expire after 15 minutes — refresh before expiry or the
+      request is rejected at the next step.
     nodes:
-      - Client    # must match D2 node names exactly
+      - Client
       - Server
 
   - id: step-02
     tag: "02"
-    title: "Server queries database"
+    title: "Server queries the database"
     nodes:
       - Server
       - Database
+```
 
+**4. Build:**
+
+```bash
+diascope build auth-flow.d2 auth-flow.story.yaml -o auth-flow.html
+open auth-flow.html
+```
+
+---
+
+## Agent-driven workflow
+
+Install the `narrate` skill into your coding agent. Then just point it at code:
+
+> "Narrate the payment flow in `src/payments/`"
+> "Create a diagram story explaining how the sync engine works"
+> "Help me explain the request lifecycle to a new developer"
+
+The agent reads your code, writes the D2 diagram and `.story.yaml`, runs `diascope build`, and hands you the `.html`.
+
+### Install for Claude Code
+
+```bash
+git clone https://github.com/Biolytics-AI/DiaScope.git ~/.claude/diascope
+mkdir -p ~/.agents/skills
+ln -s ~/.claude/diascope/skills ~/.agents/skills/diascope
+```
+
+Restart Claude Code. Full instructions: [.claude/INSTALL.md](.claude/INSTALL.md)
+
+### Install for Codex
+
+Tell Codex:
+
+```text
+Fetch and follow instructions from https://raw.githubusercontent.com/Biolytics-AI/DiaScope/main/.codex/INSTALL.md
+```
+
+Full instructions: [.codex/INSTALL.md](.codex/INSTALL.md)
+
+---
+
+## Story format reference
+
+The `.story.yaml` file is the source of truth for all narration. The `.d2` file is **never modified** by DiaScope tooling.
+
+Full reference: [docs/story-format.md](docs/story-format.md)
+
+### Linking steps to nodes
+
+`nodes:` values must match D2 node names **exactly** (case-sensitive):
+
+| D2 source       | `nodes:` value  |
+|-----------------|-----------------|
+| `Client`        | `Client`        |
+| `System.Client` | `System.Client` |
+| `"My Service"`  | `My Service`    |
+
+`diascope build` warns you if any referenced node ID isn't found in the rendered SVG.
+
+### Detail panels and edge tooltips
+
+```yaml
 detail_panels:
   Server: |
-    <p>Handles auth and routing.</p>
-    <ul><li>Rate limited: 1000 req/s</li></ul>
+    <p>Handles auth and routing. Rate limited: 1000 req/s.</p>
 
 edge_tooltips:
   "POST /api/data": "Authenticated with Bearer token"
 ```
 
-Full format reference: [docs/story-format.md](docs/story-format.md)
-
----
-
-## Linking story steps to D2 nodes
-
-`nodes` values in each step must match D2 node names **exactly** (case-sensitive):
-
-| D2 source          | `nodes` value      |
-|--------------------|--------------------|
-| `Client`           | `Client`           |
-| `System.Client`    | `System.Client`    |
-| `"My Service"`     | `My Service`       |
-
-The `diascope build` command warns you if any referenced node ID isn't found in the rendered SVG.
-
-### Optional: D2 comment hooks
-
-`# @step <id>` comments placed above nodes or edges in the `.d2` file are invisible to the D2 renderer. `diascope init` reads them to pre-populate the sidecar:
-
-```d2
-# @step step-01
-Client -> Server: sends to    ← nodes [Client, Server] extracted automatically
-```
-
-The `id` in the comment must match the `id` in the corresponding sidecar step.
-
 ---
 
 ## CLI reference
 
-```
+```text
 diascope build <diagram.d2> <story.yaml> [options]
 
-  -o, --out <file>          Output HTML file (default: <story>.html)
-  --viewer-bundle <path>    Path or URL to viewer JS bundle
+  -o, --out <file>          Output HTML (default: <story>.html)
+  --viewer-bundle <path>    Custom path/URL for viewer JS bundle
 
 diascope init <diagram.d2> [options]
 
@@ -122,9 +168,9 @@ diascope init <diagram.d2> [options]
 
 ---
 
-## JS library usage
+## JS library
 
-If you're embedding in a framework or building a custom shell:
+Embed in a framework or custom shell:
 
 ```js
 import { DiaScopeViewer } from "diascope";
@@ -138,21 +184,16 @@ const viewer = new DiaScopeViewer({
 viewer.init();
 ```
 
-The viewer expects:
-- An SVG inside `#svg-host`
-- Buttons with class `.step-btn` and `data-step="N"` attributes
-- Optional elements: `#btn-prev`, `#btn-next`, `#btn-focus`, `#btn-fit`, `#step-tag`, `#step-title`, `#step-body`, `#detail-drawer`, `#edge-tooltip`
-- [`svg-pan-zoom`](https://github.com/bumbu/svg-pan-zoom) on `window.svgPanZoom` (or pass via `options.svgPanZoom`)
-
-See [templates/story.html](templates/story.html) for a complete working shell.
+The viewer expects `svg-pan-zoom` on `window.svgPanZoom` (or via `options.svgPanZoom`). See [templates/story.html](templates/story.html) for a complete working shell.
 
 ---
 
 ## LLM patching guide
 
 When asking an LLM to update a `.story.yaml`:
-- Add steps by appending to `steps[]` with a new unique `id`
-- Node IDs come from the `.d2` file — never invent them
-- `body` supports inline HTML; use `|` block scalar for multi-line
-- Preserve existing `id` values — they may match `# @step` comments in the D2 source
-- Run `diascope build` after changes to validate node IDs against the rendered SVG
+
+* Add steps by appending to `steps[]` with a new unique `id`
+* Node IDs come from the `.d2` file — never invent them
+* `body` supports inline HTML; use `|` block scalar for multi-line
+* Preserve existing `id` values — they match `# @step` annotations in the `.d2`
+* Run `diascope build` after edits to validate and regenerate
