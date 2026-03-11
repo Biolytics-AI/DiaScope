@@ -1,2 +1,2 @@
-export { D2StoryViewer } from "./viewer.js";
+export { DiaScopeViewer } from "./viewer.js";
 export type { Step, ViewerOptions, ViewerSelectors, SvgPanZoom } from "./types.js";

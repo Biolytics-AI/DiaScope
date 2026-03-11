@@ -1,5 +1,5 @@
 {
-  "name": "d2-story-viewer",
+  "name": "diascope",
   "version": "0.1.0",
   "description": "Turn D2 diagrams into narrated interactive stories",
   "type": "module",
@@ -16,7 +16,7 @@
     }
   },
   "bin": {
-    "d2story": "./dist/cli/index.js"
+    "diascope": "./dist/cli/index.js"
   },
   "scripts": {
     "build": "tsc && node esbuild.mjs",

@@ -1,4 +1,4 @@
-# d2-story-viewer
+# diascope
 
 Turn [D2](https://d2lang.com) diagrams into narrated, interactive step-by-step stories — as a CLI that produces self-contained static HTML, or as a JS library you can embed in any page.
 
@@ -10,7 +10,7 @@ Turn [D2](https://d2lang.com) diagrams into narrated, interactive step-by-step s
 ## Quick start
 
 ```bash
-npm install -g d2-story-viewer
+npm install -g diascope
 ```
 
 **1. Add `# @step` annotations to your D2 file** *(optional but recommended)*
@@ -26,7 +26,7 @@ Server -> Database: SELECT ...
 **2. Scaffold the narration sidecar**
 
 ```bash
-d2story init my-diagram.d2
+diascope init my-diagram.d2
 # → writes my-diagram.story.yaml
 ```
 
@@ -35,7 +35,7 @@ d2story init my-diagram.d2
 **4. Build the interactive HTML**
 
 ```bash
-d2story build my-diagram.d2 my-diagram.story.yaml -o story.html
+diascope build my-diagram.d2 my-diagram.story.yaml -o story.html
 # → writes story.html (open in browser, no server needed)
 ```
 
@@ -92,11 +92,11 @@ Full format reference: [docs/story-format.md](docs/story-format.md)
 | `System.Client`    | `System.Client`    |
 | `"My Service"`     | `My Service`       |
 
-The `d2story build` command warns you if any referenced node ID isn't found in the rendered SVG.
+The `diascope build` command warns you if any referenced node ID isn't found in the rendered SVG.
 
 ### Optional: D2 comment hooks
 
-`# @step <id>` comments placed above nodes or edges in the `.d2` file are invisible to the D2 renderer. `d2story init` reads them to pre-populate the sidecar:
+`# @step <id>` comments placed above nodes or edges in the `.d2` file are invisible to the D2 renderer. `diascope init` reads them to pre-populate the sidecar:
 
 ```d2
 # @step step-01
@@ -110,12 +110,12 @@ The `id` in the comment must match the `id` in the corresponding sidecar step.
 ## CLI reference
 
 ```
-d2story build <diagram.d2> <story.yaml> [options]
+diascope build <diagram.d2> <story.yaml> [options]
 
   -o, --out <file>          Output HTML file (default: <story>.html)
   --viewer-bundle <path>    Path or URL to viewer JS bundle
 
-d2story init <diagram.d2> [options]
+diascope init <diagram.d2> [options]
 
   -o, --out <file>          Output story file (default: <diagram>.story.yaml)
 ```
@@ -127,11 +127,11 @@ d2story init <diagram.d2> [options]
 If you're embedding in a framework or building a custom shell:
 
 ```js
-import { D2StoryViewer } from "d2-story-viewer";
-import { parseStoryFile, storyToViewerOptions } from "d2-story-viewer/story";
+import { DiaScopeViewer } from "diascope";
+import { parseStoryFile, storyToViewerOptions } from "diascope/story";
 
 const story = parseStoryFile(yamlString);
-const viewer = new D2StoryViewer({
+const viewer = new DiaScopeViewer({
   ...storyToViewerOptions(story),
   autoBindControls: true,
 });
@@ -155,4 +155,4 @@ When asking an LLM to update a `.story.yaml`:
 - Node IDs come from the `.d2` file — never invent them
 - `body` supports inline HTML; use `|` block scalar for multi-line
 - Preserve existing `id` values — they may match `# @step` comments in the D2 source
-- Run `d2story build` after changes to validate node IDs against the rendered SVG
+- Run `diascope build` after changes to validate node IDs against the rendered SVG

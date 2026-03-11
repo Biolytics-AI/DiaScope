@@ -9,7 +9,7 @@ const story: StoryFile = {
 
 describe("buildHtml", () => {
   it("inlines SVG content", () => {
-    const html = buildHtml("<svg><g id='A'/></svg>", story, { viewerBundlePath: "./d2-story-viewer.bundle.js" });
+    const html = buildHtml("<svg><g id='A'/></svg>", story, { viewerBundlePath: "./diascope.bundle.js" });
     expect(html).toContain("<svg>");
   });
 

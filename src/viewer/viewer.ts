@@ -23,7 +23,7 @@ const DEFAULT_SELECTORS: Required<ViewerSelectors> = {
   edgeTooltip: "#edge-tooltip",
 };
 
-export class D2StoryViewer {
+export class DiaScopeViewer {
   curStep = 0;
   focusMode = false;
   zoomRaf: number | null = null;
@@ -159,7 +159,7 @@ export class D2StoryViewer {
   exposeInlineApi(): void {
     if (!this.exposeGlobals) return;
     const win = window as Window & {
-      viewer?: D2StoryViewer;
+      viewer?: DiaScopeViewer;
       goStep?: (idx: number, btn?: Element | null) => void;
       toggleFocus?: () => void;
       resetOverview?: () => void;

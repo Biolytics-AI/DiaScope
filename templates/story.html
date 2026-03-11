@@ -56,9 +56,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
   <script type="module">
-    import { D2StoryViewer } from "{{VIEWER_BUNDLE_PATH}}";
+    import { DiaScopeViewer } from "{{VIEWER_BUNDLE_PATH}}";
     const config = {{VIEWER_CONFIG_JSON}};
-    const viewer = new D2StoryViewer({ ...config, autoBindControls: true });
+    const viewer = new DiaScopeViewer({ ...config, autoBindControls: true });
     viewer.init();
   </script>
 </body>

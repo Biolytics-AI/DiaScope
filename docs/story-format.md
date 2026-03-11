@@ -44,7 +44,7 @@ steps:
 ## Optional: D2 comment annotations
 
 You can annotate your `.d2` file with `# @step <id>` comments.
-These are ignored by the D2 renderer — they only help `d2story init`
+These are ignored by the D2 renderer — they only help `diascope init`
 scaffold the sidecar automatically.
 
 ```d2
@@ -55,7 +55,7 @@ Client -> Server: POST /api/data
 Server -> Database: SELECT ...
 ```
 
-Running `d2story init my-diagram.d2` will produce a starter `my-diagram.story.yaml`
+Running `diascope init my-diagram.d2` will produce a starter `my-diagram.story.yaml`
 with the annotated steps pre-populated.
 
 ## Detail panels
@@ -85,4 +85,4 @@ When an LLM modifies this file:
 - Node IDs come from the `.d2` file — never invent them
 - `body` supports inline HTML; use `|` block scalar for multi-line
 - Preserve existing `id` values — they may be referenced by `# @step` annotations
-- Run `d2story build` after changes to verify node IDs are valid
+- Run `diascope build` after changes to verify node IDs are valid
