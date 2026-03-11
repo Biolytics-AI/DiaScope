@@ -34,6 +34,11 @@ jobs:
       - name: Install docs dependencies
         run: npm --prefix docs-site ci
 
+      - name: Install D2
+        run: |
+          curl -fsSL https://d2lang.com/install.sh | sh -s --
+          d2 version
+
       - name: Build package and docs assets
         run: npm run docs:build
 
