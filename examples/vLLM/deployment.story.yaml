@@ -1,84 +1,117 @@
 meta:
-  title: "vLLM Deployment Controls"
+  title: "External GPU Processing Compliance Blueprint"
   d2_source: deployment.d2
 
 detail_panels:
-  GeriCloud.AppLayer.PHIProxy: |
-    <p>Removes or pseudonymises patient identifiers before traffic crosses the controller boundary.</p>
-  NetZone.PrivateLink: |
-    <p>Dedicated private connectivity keeps the inference path off the public internet.</p>
-  GPUProvider.vLLMStack.vLLMAPI: |
-    <p>The provider hosts an OpenAI-compatible vLLM endpoint under strict residency, tenancy, and logging constraints.</p>
-  GPUProvider.vLLMStack.InferenceLog: |
-    <p>Audit events use prompt and response hashes rather than plaintext content before they are forwarded back to the controller SIEM.</p>
+  HealthcareProvider.Controls.ClientAuth: |
+    <p>This is the last HealthcareProvider-controlled gate before clinical context leaves the current hosting boundary.</p>
+    <p>It matters because the outbound call defines the point where external processing, contractual scope, and evidence requirements begin.</p>
+  Biolytics.Runtime.Ingress: |
+    <p>The external processing environment should only accept traffic from explicitly allowlisted HealthcareProvider endpoints.</p>
+  GPUProvider.EURegion: |
+    <p>Region locking and residency evidence are prerequisites, not optional deployment preferences.</p>
+  Audit.ProviderEvidence: |
+    <p>For managed inference offerings, more of the control burden shifts into this evidence pack: certifications, tenancy claims, statelessness guarantees, and audit scope.</p>
+
+edge_tooltips:
+  "authenticated request carrying clinical context": "This edge marks the handoff into externally hosted AI processing."
+  "writes operational metadata": "Audit events should avoid plaintext prompt and response content."
+  "provider access and facility trail": "Infrastructure-side evidence remains necessary even when the application stack is self-managed."
 
 steps:
-  - id: request-enters-controller
+  - id: boundary-handoff
     tag: "01"
-    title: "The request begins inside the controller boundary"
+    title: "Start at the boundary where external processing begins"
     body: |
-      The clinician query starts in the EHR application. Before any traffic leaves
-      HealthcareProvider's environment, the PHI stripping proxy removes or pseudonymises
-      patient identifiers so the downstream provider never receives raw PHI.
+      The key compliance question is not "where is the model?" but "where does
+      HealthcareProvider-controlled clinical context leave its current environment?" That
+      happens at the authenticated handoff into the external processing enclave.
+      From this point onward, the deployment needs a processor-grade control model,
+      not just an engineering diagram.
     nodes:
-      - GeriCloud.Actors.Clinician
-      - GeriCloud.AppLayer.EHR
-      - GeriCloud.AppLayer.PHIProxy
+      - HealthcareProvider.Controls.ClientAuth
+      - Biolytics.Runtime.Ingress
+      - Biolytics.Runtime.TLS
 
-  - id: controller-enforces-network-access
+  - id: controller-side-gates
     tag: "02"
-    title: "Controller-side controls gate the outbound request"
+    title: "HealthcareProvider must decide what is allowed to cross that boundary"
     body: |
-      RBAC, key management, mutual TLS, and private connectivity all have to be
-      in place before the request can leave the controller domain. The design
-      assumes allowlisting and a dedicated private path rather than public ingress.
+      Before any request leaves the EHR environment, HealthcareProvider still owns the
+      authorization decision and the outbound identity used for the call. This is
+      where use of AI assistance must be explicitly permitted and constrained. If
+      minimisation, authorization, or caller authentication are weak here, nothing
+      downstream can make the overall flow compliant again.
     nodes:
-      - GeriCloud.SecLayer.IAMControl
-      - GeriCloud.SecLayer.KeyVault
-      - NetZone.PrivateLink
-      - NetZone.mTLS
-      - NetZone.IPAllowlist
+      - HealthcareProvider.App.EHR
+      - HealthcareProvider.Controls.Authz
+      - HealthcareProvider.Controls.ClientAuth
 
-  - id: processor-prerequisites
+  - id: responsibility-split
     tag: "03"
-    title: "The processor relationship has hard prerequisites"
+    title: "The blueprint is really a split of responsibilities"
     body: |
-      The GPU provider is treated as a sub-processor. Contractual controls, audit
-      rights, and EU residency are not add-ons: they are prerequisites before any
-      production deployment can be considered acceptable.
+      HealthcareProvider remains the controller because the processing serves its EHR
+      workflows and patient context. Biolytics operates the external application
+      layer and therefore has to implement processor-grade safeguards. The GPU
+      hosting company remains a sub-processor or infrastructure party whose claims
+      still need to be contractually and evidentially verified.
     nodes:
-      - GeriCloud.OrgLayer.DPA
-      - GPUProvider.ProviderDocs.ISO27001
-      - GPUProvider.ProviderDocs.EUResidency
-      - GPUProvider.ProviderDocs.AuditRight
+      - HealthcareProvider
+      - Biolytics
+      - GPUProvider
 
-  - id: inference-stack-controls
+  - id: provider-prerequisites
     tag: "04"
-    title: "The vLLM stack runs under isolation and integrity guarantees"
+    title: "A GPU provider is not acceptable without legal and evidence prerequisites"
     body: |
-      The provider-side stack is constrained by dedicated tenancy, model integrity
-      checks, no-training guarantees, and ephemeral cache handling. The point of
-      the walkthrough is to show that 'host a model' is the easy part; the control
-      plane is the real design work.
+      Region locking, provider certifications, and signed processor terms are
+      onboarding prerequisites. This matters even more for managed inference
+      offerings, where more operational control sits with the provider and more
+      trust has to be established through evidence rather than direct implementation
+      choices. In other words: provider claims about residency, isolation, and
+      statelessness have to be reviewable before production traffic is allowed.
     nodes:
-      - GPUProvider.InfraLayer.DedicatedTenant
-      - GPUProvider.vLLMStack.ModelIntegrity
-      - GPUProvider.vLLMStack.vLLMAPI
-      - GPUProvider.vLLMStack.NoTraining
-      - GPUProvider.vLLMStack.KVCache
+      - GPUProvider.EURegion
+      - GPUProvider.Hypervisor
+      - Audit.DPA
+      - Audit.ProviderEvidence
 
-  - id: audit-and-response
+  - id: rented-gpu-blueprint
     tag: "05"
-    title: "Audit events and the response return without leaking content"
+    title: "The rented-GPU model becomes the compliance blueprint"
     body: |
-      The inference result comes back through the protected channel, while the
-      provider emits hashed audit events to the controller SIEM. HealthcareProvider retains
-      the audit trail and incident hooks instead of leaving those controls with the
-      provider.
+      This example treats the self-managed GPU model as the reference architecture
+      because it shows the safeguards that must exist when more of the stack is in
+      your own beheer. The external runtime needs controlled ingress, controlled
+      operations access, encrypted storage, model provenance, and PHI-safe audit
+      logging. The Biolytics solution should be judged against this same control
+      baseline, even if its product behavior sits above the raw inference layer.
     nodes:
-      - GPUProvider.vLLMStack.InferenceLog
-      - GeriCloud.SecLayer.SIEM
-      - GeriCloud.SecLayer.AuditArchive
-      - GeriCloud.SecLayer.Alerting
-      - NetZone.mTLS
-      - GeriCloud.AppLayer.EHR
+      - Biolytics.Runtime.Ingress
+      - Biolytics.Runtime.OpsAccess
+      - Biolytics.Runtime.Inference
+      - Biolytics.Storage.EncVolume
+      - Biolytics.Storage.Weights
+      - Biolytics.Storage.SafeAudit
+      - GPUProvider.GPU
+
+  - id: oversight-and-return
+    tag: "06"
+    title: "The response returns, but oversight stays with the controller"
+    body: |
+      A compliant setup does not end when the model returns an answer. HealthcareProvider
+      still needs evidence it can review: application audit logs, infrastructure
+      access trails, deployment provenance, key rotation records, and the provider
+      evidence pack. That is the practical point of the blueprint: to align all
+      parties on what must be reviewable when PHI-capable processing happens
+      outside the current hosting environment.
+    nodes:
+      - Biolytics.Runtime.TLS
+      - HealthcareProvider.App.EHR
+      - HealthcareProvider.Actors.DPO
+      - Audit.AppLog
+      - Audit.InfraLog
+      - Audit.DeployProv
+      - Audit.KeyLog
+      - Audit.ProviderEvidence

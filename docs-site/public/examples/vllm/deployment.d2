@@ -6,485 +6,522 @@ vars: {
 
 direction: right
 
-# ─────────────────────────────────────────────
-# EDGE CLASSES
-# ─────────────────────────────────────────────
+style: {
+  fill: "#F6F8FB"
+  stroke: "transparent"
+  font-color: "#0B1220"
+}
+
+# Canonical blueprint for PHI-capable GPU processing outside HealthcareProvider's current hosting.
+# Visual system translated from the Biolytics AI landing page light theme.
+# Exact brand font matching is a render-time concern in D2 rather than a portable source-level setting.
 
 classes: {
-  data_flow: {
+  processing_flow: {
     style: {
-      stroke: "#2563eb"
+      stroke: "#002451"
       stroke-width: 2
       font-size: 11
-      font-color: "#1e40af"
-    }
-  }
-  control_flow: {
-    style: {
-      stroke: "#64748b"
-      stroke-width: 1
-      stroke-dash: 5
-      font-size: 10
-      font-color: "#475569"
+      font-color: "#2B3990"
     }
   }
   audit_flow: {
     style: {
-      stroke: "#d97706"
+      stroke: "#D97706"
       stroke-width: 2
+      stroke-dash: 4
       font-size: 11
-      font-color: "#92400e"
+      font-color: "#9A3412"
     }
   }
-  contractual: {
+  provider_flow: {
     style: {
-      stroke: "#7c3aed"
-      stroke-width: 1
-      stroke-dash: 3
-      font-size: 10
-      font-color: "#4c1d95"
-    }
-  }
-  blocker_flow: {
-    style: {
-      stroke: "#dc2626"
+      stroke: "#6B7A90"
       stroke-width: 2
+      stroke-dash: 5
       font-size: 11
-      font-color: "#991b1b"
+      font-color: "#3C4A5D"
     }
   }
 }
 
-# ─────────────────────────────────────────────
-# LEGEND
-# ─────────────────────────────────────────────
+HealthcareProvider: "HealthcareProvider EHR Environment" {
+  direction: down
+  style: {
+    fill: "#F8FDFF"
+    stroke: "#76D7E7"
+    stroke-width: 2
+    border-radius: 18
+    font-color: "#002451"
+    bold: true
+  }
+
+  Actors: "Actors" {
+    direction: right
+    style: {
+      fill: "#FFFFFF"
+      stroke: "#D6ECF1"
+      stroke-width: 1
+      border-radius: 12
+      font-color: "#002451"
+    }
+
+    Doctor: "Doctor / User" {
+      shape: person
+      style: {
+        fill: "#FFFFFF"
+        stroke: "#76D7E7"
+        stroke-width: 2
+        font-color: "#002451"
+      }
+    }
+
+    DPO: "DPO / Auditor" {
+      shape: person
+      style: {
+        fill: "#FFFFFF"
+        stroke: "#76D7E7"
+        stroke-width: 2
+        font-color: "#002451"
+      }
+    }
+  }
+
+  App: "Clinical Application Layer" {
+    direction: down
+    style: {
+      fill: "#FFFFFF"
+      stroke: "#D7E3F0"
+      stroke-width: 1
+      border-radius: 12
+      font-color: "#002451"
+    }
+
+    EHR: "EHR Application Server" {
+      style: {
+        fill: "#FFFFFF"
+        stroke: "#9BB6D3"
+        stroke-width: 2
+        border-radius: 10
+        font-color: "#0B1220"
+      }
+    }
+  }
+
+  Controls: "HealthcareProvider Controls" {
+    direction: right
+    style: {
+      fill: "#FFFFFF"
+      stroke: "#D7E3F0"
+      stroke-width: 1
+      border-radius: 12
+      font-color: "#002451"
+    }
+
+    Authz: "Access Control\n(service authorization)" {
+      shape: hexagon
+      style: {
+        fill: "#ECFCFD"
+        stroke: "#06E1EC"
+        stroke-width: 2
+        font-color: "#002451"
+      }
+    }
+
+    ClientAuth: "mTLS Client Auth\n+ API Credential" {
+      shape: hexagon
+      style: {
+        fill: "#ECFCFD"
+        stroke: "#06E1EC"
+        stroke-width: 2
+        font-color: "#002451"
+      }
+    }
+  }
+
+  Actors.Doctor -> App.EHR: "clinical request" { class: processing_flow }
+  App.EHR -> Controls.Authz: "authorize inference use" { class: processing_flow }
+  Controls.Authz -> Controls.ClientAuth: "prepare authenticated call" { class: processing_flow }
+}
+
+Biolytics: "Biolytics-Managed External Processing" {
+  direction: down
+  style: {
+    fill: "#FBFFFF"
+    stroke: "#06E1EC"
+    stroke-width: 2
+    border-radius: 18
+    font-color: "#002451"
+    bold: true
+  }
+
+  Runtime: "Private Network Enclave" {
+    direction: down
+    style: {
+      fill: "#FFFFFF"
+      stroke: "#BCEBF0"
+      stroke-width: 1
+      border-radius: 12
+      font-color: "#002451"
+    }
+
+    Ingress: "Security Group / Allowlist\n(HealthcareProvider endpoints only)" {
+      shape: hexagon
+      style: {
+        fill: "#ECFCFD"
+        stroke: "#06E1EC"
+        stroke-width: 2
+        font-color: "#002451"
+      }
+    }
+
+    TLS: "TLS 1.2+\ntermination" {
+      shape: hexagon
+      style: {
+        fill: "#ECFCFD"
+        stroke: "#06E1EC"
+        stroke-width: 2
+        font-color: "#002451"
+      }
+    }
+
+    Inference: "vLLM Inference Service\n(non-root, read-only rootfs)" {
+      style: {
+        fill: "#FFFFFF"
+        stroke: "#2B3990"
+        stroke-width: 2
+        border-radius: 10
+        font-color: "#0B1220"
+      }
+    }
+
+    OpsAccess: "Operational Access Control\n(least privilege, MFA, SSH keys)" {
+      shape: hexagon
+      style: {
+        fill: "#ECFCFD"
+        stroke: "#06E1EC"
+        stroke-width: 2
+        font-color: "#002451"
+      }
+    }
+
+    Ingress -> TLS: "allowlisted traffic" { class: processing_flow }
+    TLS -> Inference: "decrypted inference request" { class: processing_flow }
+    Inference -> TLS: "encrypted response" { class: processing_flow }
+    OpsAccess -> Inference: "controlled operations access" { class: provider_flow }
+  }
+
+  Storage: "Application Storage and Logging" {
+    direction: right
+    style: {
+      fill: "#FFFFFF"
+      stroke: "#BCEBF0"
+      stroke-width: 1
+      border-radius: 12
+      font-color: "#002451"
+    }
+
+    EncVolume: "Encrypted Volume\n(customer-managed controls)" {
+      shape: cylinder
+      style: {
+        fill: "#F4FCFF"
+        stroke: "#76D7E7"
+        stroke-width: 2
+        font-color: "#002451"
+      }
+    }
+
+    Weights: "Model Weights\n(checksum verified on load)" {
+      shape: stored_data
+      style: {
+        fill: "#F4FCFF"
+        stroke: "#76D7E7"
+        stroke-width: 2
+        font-color: "#002451"
+      }
+    }
+
+    SafeAudit: "PHI-Safe Audit Log\n(session IDs, timestamps, metadata only)" {
+      shape: document
+      style: {
+        fill: "#FFF4E8"
+        stroke: "#E7B56A"
+        stroke-width: 2
+        font-color: "#9A3412"
+      }
+    }
+  }
+
+  Runtime.Inference -> Storage.EncVolume: "ephemeral read / write" { class: provider_flow }
+  Runtime.Inference -> Storage.Weights: "load model + verify checksum" { class: processing_flow }
+  Runtime.Inference -> Storage.SafeAudit: "metadata-only audit event" { class: audit_flow }
+}
+
+GPUProvider: "GPU Cloud Provider IaaS Layer" {
+  direction: down
+  style: {
+    fill: "#F9FBFE"
+    stroke: "#C5D2E2"
+    stroke-width: 2
+    border-radius: 18
+    font-color: "#002451"
+    bold: true
+  }
+
+  EURegion: "EU Data Center / Region Lock" {
+    shape: cloud
+    style: {
+      fill: "#EEF3F9"
+      stroke: "#A9B8CC"
+      stroke-width: 2
+      font-color: "#3C4A5D"
+    }
+  }
+
+  Hypervisor: "Hypervisor / Bare Metal" {
+    style: {
+      fill: "#FFFFFF"
+      stroke: "#C5D2E2"
+      stroke-width: 2
+      border-radius: 10
+      font-color: "#0B1220"
+    }
+  }
+
+  GPU: "GPU Hardware\n(H100 / H200 / B200 class)" {
+    shape: hexagon
+    style: {
+      fill: "#EEF3F9"
+      stroke: "#A9B8CC"
+      stroke-width: 2
+      font-color: "#3C4A5D"
+    }
+  }
+
+  Physical: "Physical DC Security\n(provider-controlled)" {
+    shape: stored_data
+    style: {
+      fill: "#EEF3F9"
+      stroke: "#A9B8CC"
+      stroke-width: 2
+      font-color: "#3C4A5D"
+    }
+  }
+
+  EURegion -> Hypervisor: "regional placement" { class: provider_flow }
+  Hypervisor -> GPU: "executes workload" { class: provider_flow }
+  Physical -> Hypervisor: "physical security coverage" { class: provider_flow }
+}
+
+Audit: "Audit and Compliance Artifacts" {
+  direction: down
+  style: {
+    fill: "#FFF9F2"
+    stroke: "#E7B56A"
+    stroke-width: 2
+    border-radius: 18
+    font-color: "#9A3412"
+    bold: true
+  }
+
+  AppLog: "Application Audit Log\n(metadata trail)" {
+    shape: document
+    style: {
+      fill: "#FFF4E8"
+      stroke: "#E7B56A"
+      stroke-width: 2
+      font-color: "#9A3412"
+    }
+  }
+
+  InfraLog: "Infrastructure Access Log\n(SSH, console, cloud trail)" {
+    shape: document
+    style: {
+      fill: "#FFF4E8"
+      stroke: "#E7B56A"
+      stroke-width: 2
+      font-color: "#9A3412"
+    }
+  }
+
+  DeployProv: "Deployment Provenance\n(image tag, model checksum)" {
+    shape: document
+    style: {
+      fill: "#FFF4E8"
+      stroke: "#E7B56A"
+      stroke-width: 2
+      font-color: "#9A3412"
+    }
+  }
+
+  KeyLog: "Key Rotation Log\n(who, when, approval)" {
+    shape: document
+    style: {
+      fill: "#FFF4E8"
+      stroke: "#E7B56A"
+      stroke-width: 2
+      font-color: "#9A3412"
+    }
+  }
+
+  DPA: "Signed DPA / Processor Agreement\n(audit rights, incident clauses)" {
+    shape: page
+    style: {
+      fill: "#FFF7E8"
+      stroke: "#D9A24D"
+      stroke-width: 2
+      font-color: "#9A3412"
+    }
+  }
+
+  ProviderEvidence: "Provider Evidence\n(ISO 27001, SOC 2, regional scope)" {
+    shape: page
+    style: {
+      fill: "#FFF7E8"
+      stroke: "#D9A24D"
+      stroke-width: 2
+      font-color: "#9A3412"
+    }
+  }
+}
 
 Legend: "Legend" {
   direction: down
   style: {
-    fill: "#f8fafc"
-    stroke: "#cbd5e1"
-    stroke-width: 2
-    border-radius: 10
-    font-size: 14
+    fill: "#FFFFFF"
+    stroke: "#D7E3F0"
+    stroke-width: 1
+    border-radius: 16
+    font-color: "#002451"
     bold: true
-    font-color: "#0f172a"
   }
 
   NodeTypes: "Node Types" {
     direction: right
-    style: { fill: "#f1f5f9"; stroke: "#e2e8f0"; border-radius: 6; font-color: "#334155" }
+    style: {
+      fill: "#FFFFFF"
+      stroke: "#E6EEF7"
+      stroke-width: 1
+      border-radius: 12
+      font-color: "#002451"
+    }
 
-    L_Service: "Service / Process" {
-      shape: oval
-      width: 160
-      style: { fill: "#e0f2fe"; stroke: "#0284c7"; font-color: "#0c4a6e" }
+    LActor: "Actor" {
+      shape: person
+      style: {
+        fill: "#FFFFFF"
+        stroke: "#76D7E7"
+        stroke-width: 2
+        font-color: "#002451"
+      }
     }
-    L_Store: "Storage / Database" {
-      shape: cylinder
-      width: 160
-      style: { fill: "#dcfce7"; stroke: "#16a34a"; font-color: "#14532d" }
+
+    LService: "Service / Process" {
+      style: {
+        fill: "#FFFFFF"
+        stroke: "#9BB6D3"
+        stroke-width: 2
+        border-radius: 10
+        font-color: "#0B1220"
+      }
     }
-    L_Gateway: "Gateway / Router" {
+
+    LControl: "Security Control" {
       shape: hexagon
-      width: 160
-      style: { fill: "#fef9c3"; stroke: "#ca8a04"; font-color: "#713f12" }
+      style: {
+        fill: "#ECFCFD"
+        stroke: "#06E1EC"
+        stroke-width: 2
+        font-color: "#002451"
+      }
     }
-    L_Auth: "Auth / Policy Enforcement" {
-      shape: diamond
-      width: 180
-      style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d" }
+
+    LEncrypted: "Encrypted Storage" {
+      shape: cylinder
+      style: {
+        fill: "#F4FCFF"
+        stroke: "#76D7E7"
+        stroke-width: 2
+        font-color: "#002451"
+      }
     }
-    L_Doc: "Policy / Contract" {
-      shape: document
-      width: 160
-      style: { fill: "#f3e8ff"; stroke: "#7c3aed"; font-color: "#4c1d95" }
-    }
-    L_Keys: "Key / Secret Store" {
-      shape: package
-      width: 160
-      style: { fill: "#fff7ed"; stroke: "#ea580c"; font-color: "#7c2d12" }
-    }
-    L_Archive: "Audit Archive" {
+
+    LStore: "Data / Model Store" {
       shape: stored_data
-      width: 160
-      style: { fill: "#f0fdf4"; stroke: "#15803d"; font-color: "#14532d" }
+      style: {
+        fill: "#F4FCFF"
+        stroke: "#76D7E7"
+        stroke-width: 2
+        font-color: "#002451"
+      }
     }
-    L_Queue: "Log Queue / SIEM" {
-      shape: queue
-      width: 160
-      style: { fill: "#fef3c7"; stroke: "#d97706"; font-color: "#713f12" }
+
+    LAudit: "Audit Log / Evidence" {
+      shape: document
+      style: {
+        fill: "#FFF4E8"
+        stroke: "#E7B56A"
+        stroke-width: 2
+        font-color: "#9A3412"
+      }
     }
-    L_Alert: "Alert / Monitor" {
-      shape: callout
-      width: 160
-      style: { fill: "#fff1f2"; stroke: "#f43f5e"; font-color: "#881337" }
+
+    LLegal: "Certificate / Legal Document" {
+      shape: page
+      style: {
+        fill: "#FFF7E8"
+        stroke: "#D9A24D"
+        stroke-width: 2
+        font-color: "#9A3412"
+      }
     }
-    L_Actor: "Human Actor" {
-      shape: person
-      width: 160
-      style: { fill: "#eff6ff"; stroke: "#3b82f6"; font-color: "#1e3a8a" }
+
+    LCloud: "Cloud / Provider Boundary" {
+      shape: cloud
+      style: {
+        fill: "#EEF3F9"
+        stroke: "#A9B8CC"
+        stroke-width: 2
+        font-color: "#3C4A5D"
+      }
     }
   }
 
-  ComplianceStatus: "Compliance Status" {
+  EdgeTypes: "Edge Semantics" {
     direction: right
-    style: { fill: "#f1f5f9"; stroke: "#e2e8f0"; border-radius: 6; font-color: "#334155" }
+    style: {
+      fill: "#FFFFFF"
+      stroke: "#E6EEF7"
+      stroke-width: 1
+      border-radius: 12
+      font-color: "#002451"
+    }
 
-    L_Blocker: "🔴 Must Implement — BLOCKER" {
-      width: 240
-      style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#991b1b"; bold: true }
-    }
-    L_Audit: "🟠 Audit Evidence Required" {
-      width: 240
-      style: { fill: "#fff7ed"; stroke: "#d97706"; font-color: "#92400e"; bold: true }
-    }
-    L_Contract: "🟣 Contractual / DPA Required" {
-      width: 240
-      style: { fill: "#f3e8ff"; stroke: "#7c3aed"; font-color: "#4c1d95"; bold: true }
-    }
-    L_Tech: "🔵 Technical Data Flow" {
-      width: 240
-      style: { fill: "#eff6ff"; stroke: "#2563eb"; font-color: "#1e3a8a"; bold: true }
-    }
+    ReqStart: ""
+    ReqEnd: "Required processing flow"
+    AuditStart: ""
+    AuditEnd: "Audit / reporting flow"
+    ProvStart: ""
+    ProvEnd: "Provider / evidence flow"
+
+    ReqStart -> ReqEnd: "solid" { class: processing_flow }
+    AuditStart -> AuditEnd: "dashed" { class: audit_flow }
+    ProvStart -> ProvEnd: "dashed" { class: provider_flow }
   }
 }
 
-# ─────────────────────────────────────────────
-# GERIMEDICA CLOUD — DATA CONTROLLER
-# ─────────────────────────────────────────────
+HealthcareProvider.Controls.ClientAuth -> Biolytics.Runtime.Ingress: "authenticated request carrying clinical context" { class: processing_flow }
+Biolytics.Runtime.TLS -> HealthcareProvider.App.EHR: "encrypted response returned to EHR" { class: processing_flow }
+Biolytics.Runtime.Inference -> GPUProvider.Hypervisor: "runs on provider infrastructure" { class: provider_flow }
 
-GeriCloud: "HealthcareProvider Cloud — Data Controller (NEN 7510 scope)" {
-  direction: down
-  style: {
-    fill: "#eff6ff"
-    stroke: "#3b82f6"
-    stroke-width: 2
-    border-radius: 12
-    font-size: 15
-    bold: true
-    font-color: "#1e3a8a"
-  }
+Biolytics.Storage.SafeAudit -> Audit.AppLog: "writes operational metadata" { class: audit_flow }
+Biolytics.Storage.Weights -> Audit.DeployProv: "records model checksum at deploy time" { class: audit_flow }
+Biolytics.Storage.EncVolume -> Audit.KeyLog: "records key rotation events" { class: audit_flow }
+GPUProvider.Physical -> Audit.InfraLog: "provider access and facility trail" { class: provider_flow }
+GPUProvider.EURegion -> Audit.ProviderEvidence: "regional hosting evidence" { class: provider_flow }
+GPUProvider.Physical -> Audit.ProviderEvidence: "certifications and audit reports" { class: provider_flow }
+GPUProvider.Hypervisor -> Audit.DPA: "covered by processor agreement" { class: provider_flow }
 
-  # ── Actors ───────────────────────────────────
-
-  Actors: "Actors" {
-    direction: right
-    style: { fill: "#dbeafe"; stroke: "#93c5fd"; border-radius: 6 }
-
-    Clinician: "Clinician" {
-      shape: person
-      style: { fill: "#dbeafe"; stroke: "#2563eb"; font-color: "#1e3a8a"; bold: true }
-    }
-
-    SysAdmin: "System Admin" {
-      shape: person
-      style: { fill: "#dbeafe"; stroke: "#2563eb"; font-color: "#1e3a8a"; bold: true }
-    }
-  }
-
-  # ── Application layer ─────────────────────────
-
-  AppLayer: "Application Layer" {
-    direction: right
-    style: { fill: "#bfdbfe"; stroke: "#60a5fa"; border-radius: 8; font-color: "#1e3a8a" }
-
-    EHR: "EHR Application" {
-      shape: oval
-      width: 200
-      style: { fill: "#e0f2fe"; stroke: "#0284c7"; font-color: "#0c4a6e"; bold: true }
-    }
-
-    PHIProxy: "🔴 PHI Stripping Proxy" {
-      shape: hexagon
-      width: 220
-      style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-      tooltip: "NEN 7510 §8.2 — Must strip or pseudonymise all PHI before forwarding prompt to GPU provider. No plaintext patient identifiers may cross the boundary. BLOCKER."
-    }
-
-    EHR -> PHIProxy: "raw prompt\n(may contain PHI)" { class: data_flow }
-  }
-
-  # ── Security controls ─────────────────────────
-
-  SecLayer: "Security Controls" {
-    direction: right
-    style: { fill: "#bfdbfe"; stroke: "#60a5fa"; border-radius: 8; font-color: "#1e3a8a" }
-
-    KeyVault: "🔴 Key Vault / HSM\n(mTLS client certs)" {
-      shape: package
-      width: 220
-      style: { fill: "#fff7ed"; stroke: "#ea580c"; font-color: "#7c2d12"; bold: true }
-      tooltip: "NEN 7510 §8.24 — All client TLS certificates and API credentials must be stored in an HSM-backed vault. Rotation policy required."
-    }
-
-    IAMControl: "🔴 IAM / RBAC\n(inference access)" {
-      shape: diamond
-      width: 220
-      style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-      tooltip: "NEN 7510 §8.2, §8.18 — Only authorised service accounts and clinician roles may call the vLLM endpoint. No anonymous or overprivileged access."
-    }
-
-    SIEM: "🟠 SIEM\n(centralised log aggregator)" {
-      shape: queue
-      width: 220
-      style: { fill: "#fef3c7"; stroke: "#d97706"; font-color: "#713f12"; bold: true }
-      tooltip: "NEN 7510 §8.15, §8.16 — Must aggregate inference audit events from GPU provider. Real-time anomaly detection required."
-    }
-
-    AuditArchive: "🟠 Audit Archive\n(immutable, 7-year retention)" {
-      shape: stored_data
-      width: 240
-      style: { fill: "#f0fdf4"; stroke: "#15803d"; font-color: "#14532d"; bold: true }
-      tooltip: "NEN 7510 §8.15 — All access to patient data (incl. inference calls involving patient context) must be logged and retained for minimum 7 years. Logs must be tamper-proof."
-    }
-
-    Alerting: "🟠 Incident Alerting\n(breach response)" {
-      shape: callout
-      width: 220
-      style: { fill: "#fff1f2"; stroke: "#f43f5e"; font-color: "#881337"; bold: true }
-      tooltip: "NEN 7510 §6.8 — Incident response procedure must explicitly cover GPU provider anomalies, unexpected data exposure, and model integrity failures."
-    }
-
-    SIEM -> AuditArchive: "persist logs\nimmutable write" { class: audit_flow }
-    SIEM -> Alerting: "anomaly / breach\nalert trigger" { class: audit_flow }
-  }
-
-  # ── Organisational / Contractual ─────────────
-
-  OrgLayer: "Organisational Controls" {
-    direction: right
-    style: { fill: "#f3e8ff"; stroke: "#c084fc"; border-radius: 8; font-color: "#4c1d95" }
-
-    DPA: "🟣 DPA — Sub-processor\nAgreement (GPU provider)" {
-      shape: document
-      width: 260
-      style: { fill: "#f3e8ff"; stroke: "#7c3aed"; font-color: "#4c1d95"; bold: true }
-      tooltip: "AVG Art. 28 + NEN 7510 §5.21 — GPU provider must be contracted as sub-processor: EU residency, audit rights, breach notification < 72hr, no training on data, deletion on termination."
-    }
-
-    RiskReg: "🟠 Risk Register\n(cloud + AI annex)" {
-      shape: document
-      width: 240
-      style: { fill: "#fef3c7"; stroke: "#d97706"; font-color: "#713f12"; bold: true }
-      tooltip: "NEN 7510 §6.1.2 — Risk treatment plan must explicitly cover: rented GPU tenancy risks, inference data interception, model integrity, and residual PHI in prompts."
-    }
-
-    ISMSUpdate: "🟠 ISMS Scope Update\n(external inference)" {
-      shape: document
-      width: 240
-      style: { fill: "#fef3c7"; stroke: "#d97706"; font-color: "#713f12"; bold: true }
-      tooltip: "NEN 7510 §5.2 — ISMS scope document must be updated to include the external GPU inference endpoint as an in-scope asset under HealthcareProvider's information security perimeter."
-    }
-  }
-}
-
-# ─────────────────────────────────────────────
-# NETWORK TRANSIT ZONE
-# ─────────────────────────────────────────────
-
-NetZone: "Network Transit — Controlled Boundary" {
-  direction: down
-  style: {
-    fill: "#f0fdf4"
-    stroke: "#4ade80"
-    stroke-width: 2
-    border-radius: 12
-    font-size: 15
-    bold: true
-    font-color: "#14532d"
-  }
-
-  PrivateLink: "🔴 Private Link / Dedicated VPN\n(no public internet path)" {
-    shape: hexagon
-    width: 280
-    style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-    tooltip: "NEN 7510 §8.20 — Network connection to GPU endpoint must NOT traverse public internet. Options: private link (e.g. AWS PrivateLink, Azure Private Endpoint), SD-WAN, or dedicated leased line. BLOCKER."
-  }
-
-  mTLS: "🔴 mTLS 1.3\n(mutual authentication)" {
-    shape: diamond
-    width: 260
-    style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-    tooltip: "NEN 7510 §8.24 — TLS 1.3 minimum, mutual: HealthcareProvider client cert (from HSM) authenticates to vLLM endpoint. Server cert must be pinned or CA-constrained."
-  }
-
-  WAF: "🟠 WAF / Rate Limiter\n(prompt injection guard)" {
-    shape: diamond
-    width: 260
-    style: { fill: "#fef3c7"; stroke: "#d97706"; font-color: "#713f12"; bold: true }
-    tooltip: "NEN 7510 §8.20 — WAF protects against prompt injection and API abuse. Rate limiting prevents exfiltration via repeated inference calls."
-  }
-
-  IPAllowlist: "🔴 IP Allowlist\n(HealthcareProvider CIDR only)" {
-    shape: diamond
-    width: 260
-    style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-    tooltip: "NEN 7510 §8.20 — vLLM API must be unreachable from the public internet. Ingress restricted to HealthcareProvider's egress IP range only. Enforced at GPU provider firewall level."
-  }
-
-  PrivateLink -> mTLS: "encrypted tunnel\nTLS 1.3" { class: blocker_flow }
-  mTLS -> WAF: "authenticated\nrequest" { class: control_flow }
-  WAF -> IPAllowlist: "inspected\nrequest" { class: control_flow }
-}
-
-# ─────────────────────────────────────────────
-# RENTED GPU PROVIDER — DATA PROCESSOR
-# ─────────────────────────────────────────────
-
-GPUProvider: "Rented GPU Provider — Sub-Processor (outside current hosting)" {
-  direction: down
-  style: {
-    fill: "#fefce8"
-    stroke: "#fbbf24"
-    stroke-width: 2
-    border-radius: 12
-    font-size: 15
-    bold: true
-    font-color: "#713f12"
-  }
-
-  # ── Provider-level compliance ─────────────────
-
-  ProviderDocs: "Provider Compliance Prerequisites" {
-    direction: right
-    style: { fill: "#fef9c3"; stroke: "#fde047"; border-radius: 8; font-color: "#713f12" }
-
-    ISO27001: "🟣 ISO 27001 / SOC 2 Type II\n(verified before onboarding)" {
-      shape: document
-      width: 260
-      style: { fill: "#f3e8ff"; stroke: "#7c3aed"; font-color: "#4c1d95"; bold: true }
-      tooltip: "NEN 7510 §5.21 — GPU provider must hold current ISO 27001 certification or SOC 2 Type II. Certificate must be validated before onboarding and rechecked annually."
-    }
-
-    EUResidency: "🔴 EU Data Residency\n(NL or designated EU region)" {
-      shape: document
-      width: 260
-      style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-      tooltip: "AVG Art. 44 + NEN 7510 — All GPU compute and any ephemeral storage must remain in EU. No prompt data may be routed to or logged in third countries. BLOCKER."
-    }
-
-    AuditRight: "🟣 Right to Audit Clause\n(or third-party audit report)" {
-      shape: document
-      width: 260
-      style: { fill: "#f3e8ff"; stroke: "#7c3aed"; font-color: "#4c1d95"; bold: true }
-      tooltip: "NEN 7510 §5.21, AVG Art. 28(3)(h) — Contract must grant HealthcareProvider right to audit GPU provider, or receive annual third-party audit reports (ISAE 3402 / SOC 2)."
-    }
-  }
-
-  # ── vLLM deployment ───────────────────────────
-
-  vLLMStack: "vLLM Deployment" {
-    direction: down
-    style: { fill: "#fef3c7"; stroke: "#f59e0b"; border-radius: 8; font-color: "#713f12" }
-
-    ModelIntegrity: "🔴 Model Integrity Check\n(SHA-256 hash on load)" {
-      shape: diamond
-      width: 260
-      style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-      tooltip: "NEN 7510 §8.8 — Model weights must be verified against a published hash at startup. Prevents tampered or backdoored models from being loaded. BLOCKER."
-    }
-
-    vLLMAPI: "vLLM Inference API\n(OpenAI-compatible endpoint)" {
-      shape: hexagon
-      width: 260
-      style: { fill: "#fef9c3"; stroke: "#ca8a04"; font-color: "#713f12"; bold: true }
-    }
-
-    NoTraining: "🔴 No Training on\nInference Data\n(contractual + technical)" {
-      shape: diamond
-      width: 260
-      style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-      tooltip: "EU AI Act + NEN 7510 §8.30 — Provider must guarantee: no logging of prompt/response content, no fine-tuning on inference data, no shadow copies. Must be both contractual and technically verifiable."
-    }
-
-    KVCache: "🟠 KV Cache\n(GPU VRAM only — no disk persist)" {
-      shape: cylinder
-      width: 260
-      style: { fill: "#fef3c7"; stroke: "#d97706"; font-color: "#713f12"; bold: true }
-      tooltip: "NEN 7510 §8.1 — Attention KV cache must exist in GPU VRAM only. Must not be paged or swapped to host disk. Verify with provider that VRAM-to-disk swapping is disabled."
-    }
-
-    InferenceLog: "🔴 Inference Audit Log\n(per-request, prompt hash only)" {
-      shape: cylinder
-      width: 260
-      style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-      tooltip: "NEN 7510 §8.15 — Each request must produce an audit event: timestamp, caller ID, prompt hash (NOT plaintext), response hash, latency ms, model version. Forwarded to HealthcareProvider SIEM — not stored at provider."
-    }
-
-    ModelIntegrity -> vLLMAPI: "integrity\nverified" { class: control_flow }
-    vLLMAPI -> NoTraining: "pass-through\nonly" { class: control_flow }
-    vLLMAPI -> KVCache: "ephemeral\nattention" { class: control_flow }
-    vLLMAPI -> InferenceLog: "emit audit event\n(hashes only)" { class: audit_flow }
-  }
-
-  # ── Infrastructure layer ──────────────────────
-
-  InfraLayer: "Hosting Infrastructure" {
-    direction: right
-    style: { fill: "#fef3c7"; stroke: "#f59e0b"; border-radius: 8; font-color: "#713f12" }
-
-    DedicatedTenant: "🔴 Dedicated Tenancy\n(no shared GPU VRAM)" {
-      shape: oval
-      width: 240
-      style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-      tooltip: "NEN 7510 §8.1 — Even pseudonymised patient data warrants dedicated GPU tenancy. Shared VRAM (multi-tenant GPU) is not acceptable. Confidential compute (Intel TDX, AMD SEV) is an acceptable alternative."
-    }
-
-    DiskEncrypt: "🔴 Disk Encryption at Rest\n(OS + swap + container layers)" {
-      shape: cylinder
-      width: 260
-      style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-      tooltip: "NEN 7510 §8.5 — All storage on the GPU node (OS swap, Docker/container layers, temp files) must be encrypted at rest. Customer-managed keys preferred."
-    }
-
-    PhysicalSec: "🟠 Physical Security\n(data centre — ISO 27001 annex)" {
-      shape: oval
-      width: 240
-      style: { fill: "#fef3c7"; stroke: "#d97706"; font-color: "#713f12"; bold: true }
-      tooltip: "NEN 7510 §7.1–7.4 — Physical access controls to the data centre must be audited. Covered by provider's ISO 27001 certification, specifically Annex A.11."
-    }
-
-    BreachNotif: "🔴 Breach Notification SLA\n(< 72hr to HealthcareProvider)" {
-      shape: callout
-      width: 240
-      style: { fill: "#fee2e2"; stroke: "#dc2626"; font-color: "#7f1d1d"; bold: true }
-      tooltip: "AVG Art. 33 + NEN 7510 — Provider must notify HealthcareProvider within 24–72hr of any suspected breach. This SLA must be explicit in the DPA / processor agreement."
-    }
-  }
-}
-
-# ─────────────────────────────────────────────
-# CROSS-BOUNDARY EDGES
-# ─────────────────────────────────────────────
-
-# Actor flows
-GeriCloud.Actors.Clinician -> GeriCloud.AppLayer.EHR: "clinical query" { class: data_flow }
-GeriCloud.Actors.SysAdmin -> GeriCloud.SecLayer.IAMControl: "manage roles" { class: control_flow }
-GeriCloud.Actors.SysAdmin -> GeriCloud.SecLayer.KeyVault: "rotate certs\n+ API keys" { class: control_flow }
-GeriCloud.Actors.SysAdmin -> GeriCloud.OrgLayer.RiskReg: "update risk\nassessment" { class: control_flow }
-
-# App to network
-GeriCloud.AppLayer.PHIProxy -> NetZone.PrivateLink: "pseudonymised\nprompt" { class: data_flow }
-
-# Auth feeds into network enforcement
-GeriCloud.SecLayer.IAMControl -> NetZone.mTLS: "authorised caller\n(RBAC check)" { class: blocker_flow }
-GeriCloud.SecLayer.KeyVault -> NetZone.mTLS: "client cert\n(mTLS — HSM-backed)" { class: blocker_flow }
-
-# Network to vLLM
-NetZone.IPAllowlist -> GPUProvider.vLLMStack.vLLMAPI: "allowlisted +\nauthenticated request" { class: data_flow }
-
-# vLLM response back
-GPUProvider.vLLMStack.vLLMAPI -> NetZone.mTLS: "inference result\n(enc in transit)" { class: data_flow }
-NetZone.mTLS -> GeriCloud.AppLayer.EHR: "decrypted\nresponse" { class: data_flow }
-
-# Audit event forwarding
-GPUProvider.vLLMStack.InferenceLog -> GeriCloud.SecLayer.SIEM: "audit events\n(no plaintext — hashes only)" { class: audit_flow }
-
-# Contractual linkages (dashed purple)
-GeriCloud.OrgLayer.DPA -> GPUProvider.ProviderDocs.ISO27001: "requires cert\nverification" { class: contractual }
-GeriCloud.OrgLayer.DPA -> GPUProvider.ProviderDocs.EUResidency: "requires EU\ndata residency" { class: contractual }
-GeriCloud.OrgLayer.DPA -> GPUProvider.ProviderDocs.AuditRight: "grants audit\nright" { class: contractual }
-GeriCloud.OrgLayer.DPA -> GPUProvider.vLLMStack.NoTraining: "no-training\nclause" { class: contractual }
-GeriCloud.OrgLayer.DPA -> GPUProvider.InfraLayer.BreachNotif: "breach SLA\n< 72hr" { class: contractual }
-GeriCloud.OrgLayer.ISMSUpdate -> GPUProvider.vLLMStack.vLLMAPI: "in-scope asset\n(ISMS boundary)" { class: contractual }
+HealthcareProvider.Actors.DPO -> Audit.AppLog: "review application audit trail" { class: audit_flow }
+HealthcareProvider.Actors.DPO -> Audit.ProviderEvidence: "review provider evidence" { class: audit_flow }
+HealthcareProvider.Actors.DPO -> Audit.DPA: "review contractual basis" { class: audit_flow }

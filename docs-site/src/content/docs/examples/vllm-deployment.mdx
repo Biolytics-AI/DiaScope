@@ -1,15 +1,30 @@
 ---
 title: vLLM Deployment
-description: A compliance-oriented example showing how DiaScope can narrate a complex deployment diagram.
+description: A compliance-first DiaScope example for reviewing external GPU processing outside HealthcareProvider's current hosting boundary.
 ---
 
-This example documents a cross-boundary vLLM deployment with controller-side controls, protected network transit, sub-processor requirements, and audit handling.
+This example is designed for healthcare buyers, legal reviewers, compliance stakeholders, and information security teams. It uses DiaScope to walk through a blueprint for compliant GPU-backed AI processing when clinical context leaves HealthcareProvider's current hosting environment.
+
+It is intentionally not a deep engineering tutorial. The story starts at the outbound boundary where externally hosted processing begins, then works outward into responsibility split, provider prerequisites, rented-GPU safeguards, and reviewable evidence.
+
+## Why this example exists
+
+HealthcareProvider wants to use AI for administrative support around EHR workflows. That means clinical context may need to reach infrastructure outside its current hosting environment.
+
+This introduces three parties with different responsibilities:
+
+- HealthcareProvider as the controller of the EHR context and use case
+- Biolytics AI as the implementation partner operating the external processing layer
+- The GPU host as the infrastructure provider or sub-processor
+
+The example uses the rented-GPU / self-managed deployment model as the reference blueprint, because it makes the required safeguards explicit. Managed inference offerings remain possible, but in those cases more trust must be established through provider evidence, certifications, contractual controls, and claims such as statelessness.
 
 ## Included assets
 
 - [Open the live story](/examples/vllm/deployment.html)
 - [Download the D2 source](/examples/vllm/deployment.d2)
 - [Download the story sidecar](/examples/vllm/deployment.story.yaml)
+- [Read the example README](/examples/vllm/README.md)
 
 ## Embedded example
 
@@ -21,11 +36,12 @@ This example documents a cross-boundary vLLM deployment with controller-side con
 
 ## What the walkthrough covers
 
-1. How a clinician request enters the EHR flow and is stripped of PHI.
-2. How HealthcareProvider-side key management and RBAC gate access before traffic leaves the controller boundary.
-3. Which processor-side contractual and residency controls must exist before onboarding a GPU provider.
-4. How the vLLM stack is constrained to dedicated tenancy, integrity checks, and no-training guarantees.
-5. How audit events and inference responses flow back without exposing plaintext prompt content at the provider.
+1. Where HealthcareProvider-controlled context leaves the current hosting boundary.
+2. Which controller-side decisions and identities must be in place before that handoff.
+3. How responsibilities split between controller, implementation partner, and GPU provider.
+4. Which legal and evidence prerequisites must exist before a provider can be onboarded.
+5. Why the rented-GPU model serves as the compliance blueprint for external AI processing.
+6. What evidence must remain reviewable after the response comes back.
 
 ## Source structure
 
@@ -39,6 +55,7 @@ examples/
 
 ## Notes on this example
 
-- The diagram is intentionally dense and compliance-heavy.
-- The story file narrows that complexity into sequential beats.
-- The generated HTML makes the same example usable in a browser without a local toolchain.
+- `examples/vLLM/` is the canonical source for the example.
+- The docs site serves public copies from `docs-site/public/examples/vllm/`.
+- The diagram is intentionally dense because the legal and control boundary is the real subject of the walkthrough.
+- The story file narrows that density into sequential beats for non-engineering review.
