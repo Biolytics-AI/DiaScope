@@ -50,7 +50,7 @@ export default defineConfig({
 				},
 				{
 					label: 'Examples',
-					items: [{ label: 'vLLM Deployment', slug: 'examples/vllm-deployment' }],
+					items: [{ label: 'Compliant GPU Blueprint', slug: 'examples/vllm-deployment' }],
 				},
 				{
 					label: 'Reference',

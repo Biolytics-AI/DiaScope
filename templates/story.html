@@ -11,7 +11,10 @@
     #canvas-wrap { flex: 1; position: relative; overflow: hidden; min-width: 0; }
     #svg-host { width: 100%; height: 100%; }
     #svg-host svg { display: block; }
-    #panel { width: 320px; display: flex; flex-direction: column; border-left: 1px solid #2d3748; background: #161b27; }
+    #panel { width: 320px; display: flex; flex-direction: column; border-left: 1px solid #2d3748; background: #161b27; position: relative; transition: width 0.18s ease; }
+    #panel-header { display: flex; justify-content: flex-start; padding: 10px 12px 0; }
+    #btn-panel-toggle { width: 28px; height: 28px; border-radius: 999px; border: 1px solid #4a5568; background: rgba(22, 27, 39, 0.92); color: #a0aec0; cursor: pointer; font-size: 14px; line-height: 1; }
+    #btn-panel-toggle:hover { background: #2d3748; }
     #step-nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 12px; border-bottom: 1px solid #2d3748; }
     .step-btn { padding: 4px 10px; border-radius: 4px; border: 1px solid #4a5568; background: transparent; color: #a0aec0; cursor: pointer; font-size: 12px; }
     .step-btn.active { background: #3182ce; border-color: #3182ce; color: #fff; }
@@ -22,13 +25,17 @@
     #toolbar { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-top: 1px solid #2d3748; }
     #toolbar button { flex: 1 1 calc(50% - 3px); padding: 5px 0; border-radius: 4px; border: 1px solid #4a5568; background: transparent; color: #a0aec0; cursor: pointer; font-size: 11px; }
     #toolbar button:hover { background: #2d3748; }
-    #story-shell:fullscreen { width: 100vw; height: 100vh; }
-    #story-shell:fullscreen #panel { width: min(420px, 34vw); }
+    #story-shell.panel-collapsed #panel { width: 52px; min-width: 52px; }
+    #story-shell.panel-collapsed #step-nav,
+    #story-shell.panel-collapsed #step-content,
+    #story-shell.panel-collapsed #toolbar { display: none; }
+    #story-shell.panel-collapsed #panel-header { padding: 12px; }
     @media (max-width: 900px) {
       #story-shell { flex-direction: column; }
       #canvas-wrap { min-height: 52vh; }
       #panel { width: 100%; border-left: 0; border-top: 1px solid #2d3748; min-height: 48vh; }
       #toolbar button { flex-basis: calc(33.333% - 4px); }
+      #story-shell.panel-collapsed #panel { width: 100%; min-width: 0; min-height: 52px; }
     }
     #detail-drawer { position: absolute; right: 0; top: 0; width: 280px; height: 100%; background: #1a202c; border-left: 1px solid #2d3748; padding: 16px; transform: translateX(100%); transition: transform 0.2s; overflow-y: auto; z-index: 10; }
     #detail-drawer.open { transform: translateX(0); }
@@ -49,6 +56,9 @@
       </div>
     </div>
     <div id="panel">
+      <div id="panel-header">
+        <button id="btn-panel-toggle" title="Collapse narration" aria-label="Collapse narration" aria-expanded="true">></button>
+      </div>
       <div id="step-nav">{{STEP_BUTTONS}}</div>
       <div id="step-content">
         <div id="step-tag"></div>
@@ -60,7 +70,6 @@
         <button id="btn-next">Next →</button>
         <button id="btn-focus" title="Toggle focus mode">● Focus</button>
         <button id="btn-fit">Fit</button>
-        <button id="btn-fullscreen" title="Expand the whole story viewer to fullscreen">Fullscreen</button>
       </div>
     </div>
   </div>

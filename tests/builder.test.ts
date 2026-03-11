@@ -76,13 +76,23 @@ describe("buildHtml", () => {
     expect(html).not.toContain('import { DiaScopeViewer }');
   });
 
-  it("renders a fullscreen control in the shared viewer toolbar", () => {
+  it("does not render a shared fullscreen control in the viewer toolbar", () => {
     const html = buildHtml("<svg/>", story, {
       viewerRuntime: { type: "inline", value: inlineViewerRuntime },
       svgPanZoomRuntime: { type: "inline", value: inlineSvgPanZoomRuntime },
     });
 
-    expect(html).toContain('id="btn-fullscreen"');
-    expect(html).toContain("Fullscreen");
+    expect(html).not.toContain('id="btn-fullscreen"');
+    expect(html).not.toContain(">Fullscreen<");
+  });
+
+  it("renders a narration collapse toggle in the shared viewer shell", () => {
+    const html = buildHtml("<svg/>", story, {
+      viewerRuntime: { type: "inline", value: inlineViewerRuntime },
+      svgPanZoomRuntime: { type: "inline", value: inlineSvgPanZoomRuntime },
+    });
+
+    expect(html).toContain('id="btn-panel-toggle"');
+    expect(html).toContain("Collapse narration");
   });
 });

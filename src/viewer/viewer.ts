@@ -15,7 +15,7 @@ const DEFAULT_SELECTORS: Required<ViewerSelectors> = {
   nextBtn: "#btn-next",
   focusBtn: "#btn-focus",
   fitBtn: "#btn-fit",
-  fullscreenBtn: "#btn-fullscreen",
+  panelToggleBtn: "#btn-panel-toggle",
   zoomInBtn: "#btn-zoom-in",
   zoomOutBtn: "#btn-zoom-out",
   detailDrawer: "#detail-drawer",
@@ -38,7 +38,7 @@ export class DiaScopeViewer {
   nextBtn: (HTMLButtonElement & { disabled: boolean }) | null = null;
   focusBtn: HTMLButtonElement | null = null;
   fitBtn: HTMLButtonElement | null = null;
-  fullscreenBtn: HTMLButtonElement | null = null;
+  panelToggleBtn: HTMLButtonElement | null = null;
   zoomInBtn: HTMLButtonElement | null = null;
   zoomOutBtn: HTMLButtonElement | null = null;
   detailDrawerEl: HTMLElement | null = null;
@@ -49,7 +49,6 @@ export class DiaScopeViewer {
   onMouseMove: ((e: MouseEvent) => void) | null = null;
   onCanvasClick: ((e: MouseEvent) => void) | null = null;
   onKeyDown: ((e: KeyboardEvent) => void) | null = null;
-  onFullscreenChange: (() => void) | null = null;
 
   readonly doc: Document;
   readonly steps: Step[];
@@ -124,39 +123,35 @@ export class DiaScopeViewer {
     resetOverview(this);
   }
 
-  getFullscreenHost(): HTMLElement | null {
-    return this.doc.querySelector("#story-shell");
-  }
-
-  syncFullscreenButton(): void {
-    if (!this.fullscreenBtn) return;
-    const inFullscreen = this.doc.fullscreenElement === this.getFullscreenHost();
-    this.fullscreenBtn.textContent = inFullscreen ? "Exit Fullscreen" : "Fullscreen";
-    this.fullscreenBtn.title = inFullscreen
-      ? "Exit fullscreen viewer mode"
-      : "Expand the whole story viewer to fullscreen";
-  }
-
-  async toggleFullscreen(): Promise<void> {
-    const host = this.getFullscreenHost();
-    if (!host) return;
-    if (this.doc.fullscreenElement === host) {
-      if (this.doc.exitFullscreen) await this.doc.exitFullscreen();
-    } else if (host.requestFullscreen) {
-      await host.requestFullscreen();
-    }
-    this.syncFullscreenButton();
-    this.pz?.resize();
-    this.pz?.fit();
-    this.pz?.center();
-  }
-
   zoomIn(): void {
     this.pz?.zoomIn();
   }
 
   zoomOut(): void {
     this.pz?.zoomOut();
+  }
+
+  getStoryShell(): HTMLElement | null {
+    return this.doc.querySelector("#story-shell");
+  }
+
+  syncPanelToggleButton(): void {
+    if (!this.panelToggleBtn) return;
+    const collapsed = this.getStoryShell()?.classList.contains("panel-collapsed") ?? false;
+    this.panelToggleBtn.textContent = collapsed ? "<" : ">";
+    this.panelToggleBtn.title = collapsed ? "Expand narration" : "Collapse narration";
+    this.panelToggleBtn.setAttribute("aria-label", collapsed ? "Expand narration" : "Collapse narration");
+    this.panelToggleBtn.setAttribute("aria-expanded", String(!collapsed));
+  }
+
+  togglePanel(): void {
+    const storyShell = this.getStoryShell();
+    if (!storyShell) return;
+    storyShell.classList.toggle("panel-collapsed");
+    this.syncPanelToggleButton();
+    this.pz?.resize();
+    this.pz?.fit();
+    this.pz?.center();
   }
 
   bindControls(): void {
@@ -178,10 +173,8 @@ export class DiaScopeViewer {
     if (this.fitBtn && !this.fitBtn.hasAttribute("onclick")) {
       this.fitBtn.addEventListener("click", () => this.resetOverview());
     }
-    if (this.fullscreenBtn && !this.fullscreenBtn.hasAttribute("onclick")) {
-      this.fullscreenBtn.addEventListener("click", () => {
-        void this.toggleFullscreen();
-      });
+    if (this.panelToggleBtn && !this.panelToggleBtn.hasAttribute("onclick")) {
+      this.panelToggleBtn.addEventListener("click", () => this.togglePanel());
     }
     if (this.zoomInBtn && !this.zoomInBtn.hasAttribute("onclick")) {
       this.zoomInBtn.addEventListener("click", () => this.zoomIn());
@@ -198,7 +191,7 @@ export class DiaScopeViewer {
       goStep?: (idx: number, btn?: Element | null) => void;
       toggleFocus?: () => void;
       resetOverview?: () => void;
-      toggleFullscreen?: () => Promise<void>;
+      togglePanel?: () => void;
       hideDetail?: () => void;
       pz?: SvgPanZoom | null;
     };
@@ -206,7 +199,7 @@ export class DiaScopeViewer {
     win.goStep = (idx, btn = null) => this.goStep(idx, btn);
     win.toggleFocus = () => this.toggleFocus();
     win.resetOverview = () => this.resetOverview();
-    win.toggleFullscreen = () => this.toggleFullscreen();
+    win.togglePanel = () => this.togglePanel();
     win.hideDetail = () => this.hideDetail();
     win.pz = this.pz;
   }
@@ -221,7 +214,7 @@ export class DiaScopeViewer {
     this.nextBtn = this.doc.querySelector(this.selectors.nextBtn);
     this.focusBtn = this.doc.querySelector(this.selectors.focusBtn);
     this.fitBtn = this.doc.querySelector(this.selectors.fitBtn);
-    this.fullscreenBtn = this.doc.querySelector(this.selectors.fullscreenBtn);
+    this.panelToggleBtn = this.doc.querySelector(this.selectors.panelToggleBtn);
     this.zoomInBtn = this.doc.querySelector(this.selectors.zoomInBtn);
     this.zoomOutBtn = this.doc.querySelector(this.selectors.zoomOutBtn);
     this.detailDrawerEl = this.doc.querySelector(this.selectors.detailDrawer);
@@ -242,13 +235,6 @@ export class DiaScopeViewer {
     resize();
     this.onResize = () => { resize(); this.pz?.fit(); this.pz?.center(); };
     window.addEventListener("resize", this.onResize);
-    this.onFullscreenChange = () => {
-      this.syncFullscreenButton();
-      resize();
-      this.pz?.fit();
-      this.pz?.center();
-    };
-    this.doc.addEventListener("fullscreenchange", this.onFullscreenChange);
 
     this.pz = this.svgPanZoomImpl(targetSvg, {
       zoomEnabled: true,
@@ -275,7 +261,7 @@ export class DiaScopeViewer {
 
     bindKeyboard(this);
     if (this.autoBindControls) this.bindControls();
-    this.syncFullscreenButton();
+    this.syncPanelToggleButton();
 
     this.goStep(0, this.doc.querySelector(`${this.selectors.stepButtons}[data-step="0"]`));
     applyHighlight(this, this.steps[0]?.nodes ?? []);
@@ -287,7 +273,6 @@ export class DiaScopeViewer {
     if (this.onMouseMove) this.doc.removeEventListener("mousemove", this.onMouseMove);
     if (this.onCanvasClick && this.canvasWrap) this.canvasWrap.removeEventListener("click", this.onCanvasClick);
     if (this.onKeyDown) this.doc.removeEventListener("keydown", this.onKeyDown);
-    if (this.onFullscreenChange) this.doc.removeEventListener("fullscreenchange", this.onFullscreenChange);
     if (this.zoomRaf) cancelAnimationFrame(this.zoomRaf);
     this.pz?.destroy?.();
   }

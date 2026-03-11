@@ -1,39 +1,38 @@
 ---
-title: vLLM Deployment
+title: Compliant GPU Blueprint
 description: A compliance-first DiaScope example for reviewing external GPU processing outside a healthcare provider's current hosting boundary.
+tableOfContents: false
 ---
 
-This example is designed for healthcare buyers, legal reviewers, compliance stakeholders, and information security teams. It uses DiaScope to walk through a blueprint for compliant GPU-backed AI processing when clinical context leaves a healthcare provider's current hosting environment.
+<div class="docs-example-page docs-example-page--wide">
 
-It is intentionally not a deep engineering tutorial. The story starts at the outbound boundary where externally hosted processing begins, then works outward into responsibility split, provider prerequisites, rented-GPU safeguards, and reviewable evidence.
+This example is designed for healthcare buyers, legal reviewers, compliance stakeholders, and information security teams. It uses DiaScope to walk through a blueprint for compliant GPU-backed AI processing when clinical context leaves a healthcare provider's current hosting environment. The walkthrough is built around the rented-GPU / self-managed deployment model because that makes responsibility split, provider prerequisites, safeguards, and reviewable evidence legible in one buyer-facing artifact.
 
-## Why this example exists
+## Example
 
-A healthcare provider wants to use AI for administrative support around EHR workflows. That means clinical context may need to reach infrastructure outside its current hosting environment.
-
-This introduces three parties with different responsibilities:
-
-- The healthcare provider as the controller of the EHR context and use case
-- Biolytics AI as the implementation partner operating the external processing layer
-- The GPU host as the infrastructure provider or sub-processor
-
-The example uses the rented-GPU / self-managed deployment model as the reference blueprint, because it makes the required safeguards explicit. Managed inference offerings remain possible, but in those cases more trust must be established through provider evidence, certifications, contractual controls, and claims such as statelessness.
+<div class="docs-story-frame">
+  <a
+    class="docs-story-popout"
+    href="/examples/vllm/deployment.html"
+    target="_blank"
+    rel="noreferrer"
+  >
+    Pop out
+  </a>
+  <div class="docs-story-embed">
+    <iframe
+      src="/examples/vllm/deployment.html"
+      title="DiaScope compliant GPU blueprint example"
+    />
+  </div>
+</div>
 
 ## Included assets
 
-- [Open the live story](/examples/vllm/deployment.html)
+- [Open the live story in a new tab](/examples/vllm/deployment.html)
 - [Download the D2 source](/examples/vllm/deployment.d2)
 - [Download the story sidecar](/examples/vllm/deployment.story.yaml)
 - [Read the example README](/examples/vllm/README.md)
-
-## Embedded example
-
-<div class="docs-story-embed">
-  <iframe
-    src="/examples/vllm/deployment.html"
-    title="DiaScope vLLM deployment example"
-  />
-</div>
 
 ## What the walkthrough covers
 
@@ -78,3 +77,5 @@ Revise the narration in examples/vLLM/deployment.story.yaml to be shorter and mo
 ```
 
 The agent workflow is documented in [AI Agents](/guides/ai-agents/).
+
+</div>

@@ -385,131 +385,6 @@ Audit: "Audit and Compliance Artifacts" {
   }
 }
 
-Legend: "Legend" {
-  direction: down
-  style: {
-    fill: "#FFFFFF"
-    stroke: "#D7E3F0"
-    stroke-width: 1
-    border-radius: 16
-    font-color: "#002451"
-    bold: true
-  }
-
-  NodeTypes: "Node Types" {
-    direction: right
-    style: {
-      fill: "#FFFFFF"
-      stroke: "#E6EEF7"
-      stroke-width: 1
-      border-radius: 12
-      font-color: "#002451"
-    }
-
-    LActor: "Actor" {
-      shape: person
-      style: {
-        fill: "#FFFFFF"
-        stroke: "#76D7E7"
-        stroke-width: 2
-        font-color: "#002451"
-      }
-    }
-
-    LService: "Service / Process" {
-      style: {
-        fill: "#FFFFFF"
-        stroke: "#9BB6D3"
-        stroke-width: 2
-        border-radius: 10
-        font-color: "#0B1220"
-      }
-    }
-
-    LControl: "Security Control" {
-      shape: hexagon
-      style: {
-        fill: "#ECFCFD"
-        stroke: "#06E1EC"
-        stroke-width: 2
-        font-color: "#002451"
-      }
-    }
-
-    LEncrypted: "Encrypted Storage" {
-      shape: cylinder
-      style: {
-        fill: "#F4FCFF"
-        stroke: "#76D7E7"
-        stroke-width: 2
-        font-color: "#002451"
-      }
-    }
-
-    LStore: "Data / Model Store" {
-      shape: stored_data
-      style: {
-        fill: "#F4FCFF"
-        stroke: "#76D7E7"
-        stroke-width: 2
-        font-color: "#002451"
-      }
-    }
-
-    LAudit: "Audit Log / Evidence" {
-      shape: document
-      style: {
-        fill: "#FFF4E8"
-        stroke: "#E7B56A"
-        stroke-width: 2
-        font-color: "#9A3412"
-      }
-    }
-
-    LLegal: "Certificate / Legal Document" {
-      shape: page
-      style: {
-        fill: "#FFF7E8"
-        stroke: "#D9A24D"
-        stroke-width: 2
-        font-color: "#9A3412"
-      }
-    }
-
-    LCloud: "Cloud / Provider Boundary" {
-      shape: cloud
-      style: {
-        fill: "#EEF3F9"
-        stroke: "#A9B8CC"
-        stroke-width: 2
-        font-color: "#3C4A5D"
-      }
-    }
-  }
-
-  EdgeTypes: "Edge Semantics" {
-    direction: right
-    style: {
-      fill: "#FFFFFF"
-      stroke: "#E6EEF7"
-      stroke-width: 1
-      border-radius: 12
-      font-color: "#002451"
-    }
-
-    ReqStart: ""
-    ReqEnd: "Required processing flow"
-    AuditStart: ""
-    AuditEnd: "Audit / reporting flow"
-    ProvStart: ""
-    ProvEnd: "Provider / evidence flow"
-
-    ReqStart -> ReqEnd: "solid" { class: processing_flow }
-    AuditStart -> AuditEnd: "dashed" { class: audit_flow }
-    ProvStart -> ProvEnd: "dashed" { class: provider_flow }
-  }
-}
-
 HealthcareProvider.Controls.ClientAuth -> Biolytics.Runtime.Ingress: "authenticated request carrying clinical context" { class: processing_flow }
 Biolytics.Runtime.TLS -> HealthcareProvider.App.EHR: "encrypted response returned to EHR" { class: processing_flow }
 Biolytics.Runtime.Inference -> GPUProvider.Hypervisor: "runs on provider infrastructure" { class: provider_flow }
@@ -525,3 +400,131 @@ GPUProvider.Hypervisor -> Audit.DPA: "covered by processor agreement" { class: p
 HealthcareProvider.Actors.DPO -> Audit.AppLog: "review application audit trail" { class: audit_flow }
 HealthcareProvider.Actors.DPO -> Audit.ProviderEvidence: "review provider evidence" { class: audit_flow }
 HealthcareProvider.Actors.DPO -> Audit.DPA: "review contractual basis" { class: audit_flow }
+
+# Legend reference block kept here, commented out until the viewer-side legend issue is resolved.
+# To restore it, remove the leading `# ` markers from this section.
+#
+# Legend: "Legend" {
+#   direction: down
+#   style: {
+#     fill: "#FFFFFF"
+#     stroke: "#D7E3F0"
+#     stroke-width: 1
+#     border-radius: 16
+#     font-color: "#002451"
+#     bold: true
+#   }
+#
+#   NodeTypes: "Node Types" {
+#     direction: right
+#     style: {
+#       fill: "#FFFFFF"
+#       stroke: "#E6EEF7"
+#       stroke-width: 1
+#       border-radius: 12
+#       font-color: "#002451"
+#     }
+#
+#     LActor: "Actor" {
+#       shape: person
+#       style: {
+#         fill: "#FFFFFF"
+#         stroke: "#76D7E7"
+#         stroke-width: 2
+#         font-color: "#002451"
+#       }
+#     }
+#
+#     LService: "Service / Process" {
+#       style: {
+#         fill: "#FFFFFF"
+#         stroke: "#9BB6D3"
+#         stroke-width: 2
+#         border-radius: 10
+#         font-color: "#0B1220"
+#       }
+#     }
+#
+#     LControl: "Security Control" {
+#       shape: hexagon
+#       style: {
+#         fill: "#ECFCFD"
+#         stroke: "#06E1EC"
+#         stroke-width: 2
+#         font-color: "#002451"
+#       }
+#     }
+#
+#     LEncrypted: "Encrypted Storage" {
+#       shape: cylinder
+#       style: {
+#         fill: "#F4FCFF"
+#         stroke: "#76D7E7"
+#         stroke-width: 2
+#         font-color: "#002451"
+#       }
+#     }
+#
+#     LStore: "Data / Model Store" {
+#       shape: stored_data
+#       style: {
+#         fill: "#F4FCFF"
+#         stroke: "#76D7E7"
+#         stroke-width: 2
+#         font-color: "#002451"
+#       }
+#     }
+#
+#     LAudit: "Audit Log / Evidence" {
+#       shape: document
+#       style: {
+#         fill: "#FFF4E8"
+#         stroke: "#E7B56A"
+#         stroke-width: 2
+#         font-color: "#9A3412"
+#       }
+#     }
+#
+#     LLegal: "Certificate / Legal Document" {
+#       shape: page
+#       style: {
+#         fill: "#FFF7E8"
+#         stroke: "#D9A24D"
+#         stroke-width: 2
+#         font-color: "#9A3412"
+#       }
+#     }
+#
+#     LCloud: "Cloud / Provider Boundary" {
+#       shape: cloud
+#       style: {
+#         fill: "#EEF3F9"
+#         stroke: "#A9B8CC"
+#         stroke-width: 2
+#         font-color: "#3C4A5D"
+#       }
+#     }
+#   }
+#
+#   EdgeTypes: "Edge Semantics" {
+#     direction: right
+#     style: {
+#       fill: "#FFFFFF"
+#       stroke: "#E6EEF7"
+#       stroke-width: 1
+#       border-radius: 12
+#       font-color: "#002451"
+#     }
+#
+#     ReqStart: ""
+#     ReqEnd: "Required processing flow"
+#     AuditStart: ""
+#     AuditEnd: "Audit / reporting flow"
+#     ProvStart: ""
+#     ProvEnd: "Provider / evidence flow"
+#
+#     ReqStart -> ReqEnd: "solid" { class: processing_flow }
+#     AuditStart -> AuditEnd: "dashed" { class: audit_flow }
+#     ProvStart -> ProvEnd: "dashed" { class: provider_flow }
+#   }
+# }
