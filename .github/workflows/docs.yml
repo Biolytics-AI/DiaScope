@@ -20,31 +20,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            docs-site/package-lock.json
+
+      - name: Install package dependencies
+        run: npm ci
+
+      - name: Install docs dependencies
+        run: npm --prefix docs-site ci
+
+      - name: Build package and docs assets
+        run: npm run docs:build
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
-
-      - name: Assemble docs site
-        run: |
-          mkdir -p _site
-          cp README.md _site/index.md
-          cp -r docs/* _site/
-          # Jekyll front matter for GitHub Pages theme
-          for f in _site/*.md; do
-            if ! grep -q "^---" "$f"; then
-              title=$(head -1 "$f" | sed 's/^#* *//')
-              printf -- "---\ntitle: %s\nlayout: default\n---\n\n" "$title" | cat - "$f" > tmp && mv tmp "$f"
-            fi
-          done
-          cat > _site/_config.yml << 'EOF'
-          title: DiaScope
-          description: Turn D2 diagrams into narrated interactive stories
-          theme: jekyll-theme-minimal
-          EOF
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: docs-site/dist
 
   deploy:
     needs: build-docs

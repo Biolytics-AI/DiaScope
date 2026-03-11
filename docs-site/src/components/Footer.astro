@@ -1,0 +1,36 @@
+---
+import DefaultFooter from '@astrojs/starlight/components/Footer.astro';
+---
+
+<DefaultFooter />
+
+<div class="brand-footer">
+	<a href="https://www.biolytics.ai">Biolytics AI</a>
+	<a href="https://github.com/Biolytics-AI/DiaScope">GitHub</a>
+	<a href="https://diascope.biolytics.ai">Docs Home</a>
+</div>
+
+<style>
+	@layer starlight.components {
+		.brand-footer {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.9rem 1.25rem;
+			margin: 0 auto 2.5rem;
+			justify-content: center;
+			font-family: var(--sl-font-system);
+			font-size: 0.76rem;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+		}
+
+		.brand-footer a {
+			color: var(--sl-color-gray-3);
+			text-decoration: none;
+		}
+
+		.brand-footer a:hover {
+			color: var(--sl-color-text-accent);
+		}
+	}
+</style>

@@ -1,0 +1,84 @@
+meta:
+  title: "vLLM Deployment Controls"
+  d2_source: deployment.d2
+
+detail_panels:
+  GeriCloud.AppLayer.PHIProxy: |
+    <p>Removes or pseudonymises patient identifiers before traffic crosses the controller boundary.</p>
+  NetZone.PrivateLink: |
+    <p>Dedicated private connectivity keeps the inference path off the public internet.</p>
+  GPUProvider.vLLMStack.vLLMAPI: |
+    <p>The provider hosts an OpenAI-compatible vLLM endpoint under strict residency, tenancy, and logging constraints.</p>
+  GPUProvider.vLLMStack.InferenceLog: |
+    <p>Audit events use prompt and response hashes rather than plaintext content before they are forwarded back to the controller SIEM.</p>
+
+steps:
+  - id: request-enters-controller
+    tag: "01"
+    title: "The request begins inside the controller boundary"
+    body: |
+      The clinician query starts in the EHR application. Before any traffic leaves
+      HealthcareProvider's environment, the PHI stripping proxy removes or pseudonymises
+      patient identifiers so the downstream provider never receives raw PHI.
+    nodes:
+      - GeriCloud.Actors.Clinician
+      - GeriCloud.AppLayer.EHR
+      - GeriCloud.AppLayer.PHIProxy
+
+  - id: controller-enforces-network-access
+    tag: "02"
+    title: "Controller-side controls gate the outbound request"
+    body: |
+      RBAC, key management, mutual TLS, and private connectivity all have to be
+      in place before the request can leave the controller domain. The design
+      assumes allowlisting and a dedicated private path rather than public ingress.
+    nodes:
+      - GeriCloud.SecLayer.IAMControl
+      - GeriCloud.SecLayer.KeyVault
+      - NetZone.PrivateLink
+      - NetZone.mTLS
+      - NetZone.IPAllowlist
+
+  - id: processor-prerequisites
+    tag: "03"
+    title: "The processor relationship has hard prerequisites"
+    body: |
+      The GPU provider is treated as a sub-processor. Contractual controls, audit
+      rights, and EU residency are not add-ons: they are prerequisites before any
+      production deployment can be considered acceptable.
+    nodes:
+      - GeriCloud.OrgLayer.DPA
+      - GPUProvider.ProviderDocs.ISO27001
+      - GPUProvider.ProviderDocs.EUResidency
+      - GPUProvider.ProviderDocs.AuditRight
+
+  - id: inference-stack-controls
+    tag: "04"
+    title: "The vLLM stack runs under isolation and integrity guarantees"
+    body: |
+      The provider-side stack is constrained by dedicated tenancy, model integrity
+      checks, no-training guarantees, and ephemeral cache handling. The point of
+      the walkthrough is to show that 'host a model' is the easy part; the control
+      plane is the real design work.
+    nodes:
+      - GPUProvider.InfraLayer.DedicatedTenant
+      - GPUProvider.vLLMStack.ModelIntegrity
+      - GPUProvider.vLLMStack.vLLMAPI
+      - GPUProvider.vLLMStack.NoTraining
+      - GPUProvider.vLLMStack.KVCache
+
+  - id: audit-and-response
+    tag: "05"
+    title: "Audit events and the response return without leaking content"
+    body: |
+      The inference result comes back through the protected channel, while the
+      provider emits hashed audit events to the controller SIEM. HealthcareProvider retains
+      the audit trail and incident hooks instead of leaving those controls with the
+      provider.
+    nodes:
+      - GPUProvider.vLLMStack.InferenceLog
+      - GeriCloud.SecLayer.SIEM
+      - GeriCloud.SecLayer.AuditArchive
+      - GeriCloud.SecLayer.Alerting
+      - NetZone.mTLS
+      - GeriCloud.AppLayer.EHR

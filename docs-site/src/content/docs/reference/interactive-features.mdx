@@ -1,0 +1,42 @@
+---
+title: Interactive Features
+description: What the DiaScope viewer does today when you ship a narrated diagram.
+---
+
+DiaScope's viewer is built around progressive explanation: each step changes what is highlighted, what is visible, and what narration is shown.
+
+## Step navigation
+
+- Step buttons move directly to a chosen beat
+- Previous and next controls move through the walkthrough sequentially
+- Keyboard navigation supports `ArrowLeft`, `ArrowRight`, `ArrowUp`, and `ArrowDown`
+
+## Zoom and framing
+
+- The viewer automatically pans and zooms to the active nodes for each step
+- `Fit` resets the diagram to the full overview
+- Manual zoom in and zoom out controls remain available for inspection
+
+## Focus and context
+
+- `Focus` mode hides non-active nodes and edges to isolate the current concept
+- `Context` mode restores the full diagram while keeping the active nodes highlighted
+
+## Node details
+
+- Nodes can expose click-to-open detail panels
+- Detail panels are driven by the `detail_panels` section in the story file
+- This is useful for operational notes, implementation details, or supporting evidence that should not clutter the main walkthrough
+
+## Edge tooltips
+
+- Edge labels can expose hover tooltips
+- Tooltips are driven by the `edge_tooltips` section in the story file
+- This is useful for protocol notes, data classifications, auth context, or latency/throughput details
+
+## What is not in the viewer today
+
+- There is no built-in filtering UI at the moment
+- There is no built-in editing mode inside the viewer
+
+If you need filtering, search, or richer controls in the shell, use the JavaScript API and compose the viewer into your own application wrapper.

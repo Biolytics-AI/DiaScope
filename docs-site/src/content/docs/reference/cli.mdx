@@ -1,0 +1,41 @@
+---
+title: CLI
+description: Command reference for the DiaScope CLI.
+---
+
+## Commands
+
+### `diascope build`
+
+Render a D2 diagram and story sidecar into a self-contained HTML file.
+
+```text
+diascope build <diagram.d2> <story.yaml> [options]
+
+  -o, --out <file>          Output HTML file (default: <story>.html)
+  --viewer-bundle <path>    Custom path or URL for the viewer JS bundle
+```
+
+### `diascope init`
+
+Scaffold a story file from `# @step` annotations in a D2 diagram.
+
+```text
+diascope init <diagram.d2> [options]
+
+  -o, --out <file>          Output story file (default: <diagram>.story.yaml)
+```
+
+## Build behavior
+
+When `diascope build` runs, it:
+
+1. renders the D2 source to SVG using the `d2` CLI
+2. parses the story YAML
+3. warns about story node IDs that do not exist in the rendered SVG
+4. writes a single HTML file containing the viewer shell and rendered story
+
+## Exit behavior
+
+- If `d2` fails, the command exits with status code `1`.
+- If the story file cannot be parsed, the command exits with an error from the parser layer.

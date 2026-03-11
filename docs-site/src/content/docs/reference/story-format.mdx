@@ -1,0 +1,88 @@
+---
+title: Story Format
+description: Structure of the `.story.yaml` file that drives DiaScope walkthroughs.
+---
+
+## Minimal example
+
+```yaml
+meta:
+  title: "Request Flow"
+  d2_source: my-diagram.d2
+
+steps:
+  - id: step-01
+    tag: "01"
+    title: "Client sends request"
+    body: |
+      The client initiates an HTTP POST to /api/data.
+      Authentication is handled at this boundary.
+    nodes:
+      - Client
+      - Server
+
+  - id: step-02
+    tag: "02"
+    title: "Server queries database"
+    nodes:
+      - Server
+      - Database
+```
+
+## Top-level fields
+
+### `meta`
+
+- `title`: human-readable title of the story
+- `d2_source`: path to the corresponding D2 diagram
+
+### `steps`
+
+Ordered list of narrative beats.
+
+Each step can include:
+
+- `id`: stable identifier
+- `tag`: short label shown in the viewer navigation
+- `title`: step heading
+- `body`: optional narration body
+- `nodes`: array of node IDs to highlight for this step
+
+## Linking to D2 nodes
+
+Node IDs are case-sensitive and must match the D2 source exactly.
+
+## Optional annotations
+
+`diascope init` can scaffold a story file from D2 comments such as:
+
+```txt
+# @step step-01
+Client -> Server: POST /api/data
+```
+
+## Detail panels
+
+Use `detail_panels` to attach HTML content to a node.
+
+```yaml
+detail_panels:
+  Server: |
+    <p>Handles authentication and request routing.</p>
+```
+
+## Edge tooltips
+
+Use `edge_tooltips` to attach extra context to an edge label.
+
+```yaml
+edge_tooltips:
+  "POST /api/data": "Authenticated with Bearer token"
+```
+
+## LLM editing rules
+
+- Add steps by appending a new unique `id`
+- Never invent node IDs that are not present in the D2 file
+- Preserve existing `id` values if the D2 file uses `# @step` markers
+- Run `diascope build` after edits to validate the updated story

@@ -1,8 +1,15 @@
 # DiaScope
 
+[![Package CI](https://github.com/Biolytics-AI/DiaScope/actions/workflows/ci.yml/badge.svg)](https://github.com/Biolytics-AI/DiaScope/actions/workflows/ci.yml)
+[![Docs](https://github.com/Biolytics-AI/DiaScope/actions/workflows/docs.yml/badge.svg)](https://github.com/Biolytics-AI/DiaScope/actions/workflows/docs.yml)
+[![Docs Site](https://img.shields.io/badge/docs-diascope.biolytics.ai-06E1EC)](https://diascope.biolytics.ai)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-002451)](https://nodejs.org/)
+
 Turn any codebase, system, or flow into a narrated interactive diagram story — a self-contained `.html` file your audience can step through with arrow keys.
 
 You author a [D2](https://d2lang.com) diagram and a YAML narration sidecar. DiaScope renders the diagram, wires up the step-by-step navigation, and writes one file you can open in a browser or share anywhere.
+
+Docs: `https://diascope.biolytics.ai`
 
 **Or:** install the `narrate` skill and let an agent do it for you.
 
@@ -11,6 +18,18 @@ You author a [D2](https://d2lang.com) diagram and a YAML narration sidecar. DiaS
 ## How it looks
 
 Each story is a full-screen page: diagram on the left, narration panel on the right. Each step highlights the relevant nodes, pans/zooms to them, and shows the title + body text. Click a node for detail. Press `→` to advance.
+
+## Interactive features
+
+- Step-by-step narration with active node highlighting
+- Automatic pan and zoom to the current step
+- `Focus` mode to isolate active nodes and edges
+- `Fit` plus manual zoom controls
+- Keyboard navigation with arrow keys
+- Clickable node detail panels
+- Edge hover tooltips
+
+See the live example and feature docs at `https://diascope.biolytics.ai`.
 
 ---
 
@@ -165,6 +184,18 @@ diascope init <diagram.d2> [options]
 
   -o, --out <file>          Output story file (default: <diagram>.story.yaml)
 ```
+
+---
+
+## Examples
+
+Working examples live in [`examples/`](examples/). The current vLLM example includes:
+
+- `examples/vLLM/deployment.d2`
+- `examples/vLLM/deployment.story.yaml`
+- `examples/vLLM/README.md`
+
+You can also browse the same example in the docs at `https://diascope.biolytics.ai/examples/vllm-deployment/`.
 
 ---
 

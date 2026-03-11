@@ -1,0 +1,49 @@
+---
+title: DiaScope
+description: Turn D2 diagrams into narrated, interactive HTML explainers.
+template: splash
+hero:
+  tagline: Turn any codebase, system, or flow into a narrated interactive diagram story.
+  actions:
+    - text: Get Started
+      link: /getting-started/
+      icon: right-arrow
+    - text: View the vLLM Example
+      link: /examples/vllm-deployment/
+      icon: open-book
+    - text: Visit Biolytics AI
+      link: https://www.biolytics.ai
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## What DiaScope gives you
+
+<CardGrid stagger>
+	<Card title="D2 stays canonical" icon="document">
+		You author the diagram in D2 and keep narration in a sidecar `.story.yaml`. DiaScope never mutates your source diagram.
+	</Card>
+	<Card title="Step-by-step focus" icon="open-book">
+		Each story step highlights the relevant nodes, pans the viewport, and pairs the visual state with narration.
+	</Card>
+	<Card title="Self-contained output" icon="cloud-download">
+		The final artifact is a single `.html` file you can open locally, attach to docs, or share with clients and teammates.
+	</Card>
+	<Card title="Agent-friendly workflow" icon="setting">
+		Agents can inspect a codebase, write the D2 diagram, generate the story file, and build the final explainer automatically.
+	</Card>
+	<Card title="Working examples" icon="approve-check-circle">
+		Start from a real example, inspect the source files, and open a generated story artifact directly from this docs site.
+	</Card>
+</CardGrid>
+
+## Typical workflow
+
+1. Author a D2 diagram and optionally mark beats with `# @step` comments.
+2. Run `diascope init` to scaffold a story sidecar.
+3. Fill in titles, body text, and node mappings.
+4. Run `diascope build` to emit a single interactive HTML document.
+
+If you want the shortest path, start with [Getting Started](/getting-started/). If you want to see a realistic example first, open [vLLM Deployment](/examples/vllm-deployment/).

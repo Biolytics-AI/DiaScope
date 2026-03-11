@@ -1,0 +1,63 @@
+---
+title: Authoring Stories
+description: How DiaScope maps story steps to D2 nodes and enriches diagrams with narration.
+---
+
+## Keep the responsibilities separate
+
+- The `.d2` file defines the structure and labels of the diagram.
+- The `.story.yaml` file defines narration, step order, and optional overlays such as detail panels or edge tooltips.
+- DiaScope treats the story file as the source of truth for walkthrough behavior.
+
+## Use exact node names
+
+`nodes:` values must match the D2 node names exactly, including nested paths.
+
+| D2 source | Story `nodes:` value |
+| --- | --- |
+| `Client` | `Client` |
+| `System.Client` | `System.Client` |
+| `"My Service"` | `My Service` |
+
+If a referenced node is missing in the rendered SVG, `diascope build` warns you before writing the final HTML.
+
+## Optional step annotations in D2
+
+Use `# @step <id>` markers when you want `diascope init` to scaffold the sidecar automatically.
+
+```txt
+# @step ingress
+Client -> API Gateway
+
+# @step inference
+API Gateway -> Inference Service
+```
+
+## Detail panels
+
+Use `detail_panels` when you want node-specific explanatory content on click.
+
+```yaml
+detail_panels:
+  Server: |
+    <p>Handles auth and routing.</p>
+    <ul>
+      <li>Rate limited: 1000 req/s</li>
+    </ul>
+```
+
+## Edge tooltips
+
+Use `edge_tooltips` when specific arrows need extra context.
+
+```yaml
+edge_tooltips:
+  "POST /api/data": "Authenticated with Bearer token"
+```
+
+## Practical authoring advice
+
+- Keep each step focused on one beat.
+- Avoid inventing node IDs in the story file.
+- Prefer short, high-signal narration over prose blocks.
+- Run `diascope build` after any story edit to catch broken node references early.

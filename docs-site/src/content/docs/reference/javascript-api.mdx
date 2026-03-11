@@ -1,0 +1,25 @@
+---
+title: JavaScript API
+description: Embed the DiaScope viewer in a custom shell or application.
+---
+
+## Import the viewer
+
+```js
+import { DiaScopeViewer } from "diascope";
+import { parseStoryFile, storyToViewerOptions } from "diascope/story";
+
+const story = parseStoryFile(yamlString);
+const viewer = new DiaScopeViewer({
+  ...storyToViewerOptions(story),
+  autoBindControls: true,
+});
+
+viewer.init();
+```
+
+## Notes
+
+- The viewer expects `svg-pan-zoom` on `window.svgPanZoom`, unless you pass it explicitly through `options.svgPanZoom`.
+- The rendered SVG and parsed story are the two essential inputs.
+- Use the CLI if you want DiaScope to package everything into a single HTML artifact for you.

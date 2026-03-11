@@ -2,6 +2,7 @@
   "name": "diascope",
   "version": "0.1.0",
   "description": "Turn D2 diagrams into narrated interactive stories",
+  "homepage": "https://diascope.biolytics.ai",
   "type": "module",
   "main": "./dist/viewer/index.js",
   "types": "./dist/viewer/index.d.ts",
@@ -21,6 +22,9 @@
   "scripts": {
     "build": "tsc && node esbuild.mjs",
     "build:tsc": "tsc",
+    "docs:prepare-assets": "mkdir -p docs-site/public/examples/vllm && cp examples/vLLM/deployment.d2 docs-site/public/examples/vllm/deployment.d2 && cp examples/vLLM/deployment.story.yaml docs-site/public/examples/vllm/deployment.story.yaml && cp examples/vLLM/README.md docs-site/public/examples/vllm/README.md && node dist/cli/index.js build examples/vLLM/deployment.d2 examples/vLLM/deployment.story.yaml -o docs-site/public/examples/vllm/deployment.html",
+    "docs:dev": "npm --prefix docs-site run dev",
+    "docs:build": "npm run build && npm run docs:prepare-assets && npm --prefix docs-site run build",
     "test": "vitest run",
     "test:watch": "vitest"
   },

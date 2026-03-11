@@ -1,0 +1,44 @@
+---
+title: vLLM Deployment
+description: A compliance-oriented example showing how DiaScope can narrate a complex deployment diagram.
+---
+
+This example documents a cross-boundary vLLM deployment with controller-side controls, protected network transit, sub-processor requirements, and audit handling.
+
+## Included assets
+
+- [Open the live story](/examples/vllm/deployment.html)
+- [Download the D2 source](/examples/vllm/deployment.d2)
+- [Download the story sidecar](/examples/vllm/deployment.story.yaml)
+
+## Embedded example
+
+<iframe
+  src="/examples/vllm/deployment.html"
+  title="DiaScope vLLM deployment example"
+  style="width:100%; height:780px; border:1px solid rgba(0,36,81,0.12); border-radius:16px; background:white;"
+/>
+
+## What the walkthrough covers
+
+1. How a clinician request enters the EHR flow and is stripped of PHI.
+2. How HealthcareProvider-side key management and RBAC gate access before traffic leaves the controller boundary.
+3. Which processor-side contractual and residency controls must exist before onboarding a GPU provider.
+4. How the vLLM stack is constrained to dedicated tenancy, integrity checks, and no-training guarantees.
+5. How audit events and inference responses flow back without exposing plaintext prompt content at the provider.
+
+## Source structure
+
+```text
+examples/
+  vLLM/
+    deployment.d2
+    deployment.story.yaml
+    README.md
+```
+
+## Notes on this example
+
+- The diagram is intentionally dense and compliance-heavy.
+- The story file narrows that complexity into sequential beats.
+- The generated HTML makes the same example usable in a browser without a local toolchain.

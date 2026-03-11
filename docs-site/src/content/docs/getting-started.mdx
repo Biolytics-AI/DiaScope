@@ -1,0 +1,81 @@
+---
+title: Getting Started
+description: Install DiaScope, scaffold a story file, and build your first narrated diagram.
+---
+
+## Requirements
+
+- Node.js 18+ for the DiaScope package
+- `d2` installed and available on your `PATH`
+
+## Install the CLI
+
+```bash
+npm install -g diascope
+```
+
+## 1. Write a D2 diagram
+
+You can optionally annotate the diagram with `# @step` comments to mark narrative beats.
+
+```txt
+# @step step-01
+Client -> Server: POST /api/data
+
+# @step step-02
+Server -> Database: SELECT ...
+
+# @step step-03
+Database -> Server: result row
+Server -> Client: 200 OK
+```
+
+## 2. Scaffold the story file
+
+```bash
+diascope init auth-flow.d2
+```
+
+By default this writes `auth-flow.story.yaml`.
+
+## 3. Fill in the narration
+
+```yaml
+meta:
+  title: "Auth Flow"
+  d2_source: auth-flow.d2
+
+steps:
+  - id: step-01
+    tag: "01"
+    title: "Client sends authenticated request"
+    body: |
+      The client attaches a short-lived JWT in the Authorization header.
+      Tokens expire after 15 minutes and must be refreshed before expiry.
+    nodes:
+      - Client
+      - Server
+```
+
+## 4. Build a shareable HTML file
+
+```bash
+diascope build auth-flow.d2 auth-flow.story.yaml -o auth-flow.html
+open auth-flow.html
+```
+
+## Local package workflow
+
+If you are working from the repository instead of the published package:
+
+```bash
+npm install
+npm run build
+node dist/cli/index.js build auth-flow.d2 auth-flow.story.yaml -o auth-flow.html
+```
+
+## Next reading
+
+- [Authoring Stories](/guides/authoring-stories/)
+- [CLI Reference](/reference/cli/)
+- [Story Format](/reference/story-format/)
