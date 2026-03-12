@@ -600,6 +600,7 @@ var DiaScopeBundle = (() => {
       this.onMouseMove = null;
       this.onCanvasClick = null;
       this.onKeyDown = null;
+      this.onPanelTransitionEnd = null;
       this.narrowObserver = null;
       this.canvasObserver = null;
       this.viewportSyncRaf = null;
@@ -749,9 +750,15 @@ var DiaScopeBundle = (() => {
       };
       this.viewportSyncRaf = schedule(() => {
         this.viewportSyncRaf = null;
-        const desiredState = this.captureViewportState() ?? this.lastKnownViewport;
         if (!this.applyCanvasSize(targetSvg)) return;
         this.pz?.resize();
+        const activeNodes = this.curStep >= 0 ? this.steps[this.curStep]?.nodes ?? [] : [];
+        if (activeNodes.length) {
+          applyHighlight(this, activeNodes);
+          autoZoom(this, activeNodes);
+          return;
+        }
+        const desiredState = this.captureViewportState() ?? this.lastKnownViewport;
         if (!this.restoreViewport(desiredState)) this.recoverViewport();
       });
     }
@@ -876,6 +883,15 @@ var DiaScopeBundle = (() => {
       bindKeyboard(this);
       if (this.autoBindControls) this.bindControls();
       this.syncPanelToggleButton();
+      const panel = this.doc.getElementById("panel");
+      if (panel) {
+        this.onPanelTransitionEnd = (e) => {
+          if (e.target !== panel) return;
+          if (e.propertyName !== "width" && e.propertyName !== "min-height") return;
+          this.onResize?.();
+        };
+        panel.addEventListener("transitionend", this.onPanelTransitionEnd);
+      }
       if (this.overview && this.overview.position !== "last") {
         this.showOverview(this.doc.querySelector(`${this.selectors.stepButtons}[data-step="all"]`));
       } else {
@@ -950,6 +966,7 @@ var DiaScopeBundle = (() => {
       if (this.onMouseMove) this.doc.removeEventListener("mousemove", this.onMouseMove);
       if (this.onCanvasClick && this.canvasWrap) this.canvasWrap.removeEventListener("click", this.onCanvasClick);
       if (this.onKeyDown) this.doc.removeEventListener("keydown", this.onKeyDown);
+      if (this.onPanelTransitionEnd) this.doc.getElementById("panel")?.removeEventListener("transitionend", this.onPanelTransitionEnd);
       if (this.zoomRaf) cancelAnimationFrame(this.zoomRaf);
       if (this.viewportSyncRaf !== null && typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.viewportSyncRaf);
       this.narrowObserver?.disconnect();

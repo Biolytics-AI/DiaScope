@@ -4,18 +4,41 @@ import { DiaScopeViewer } from "../src/viewer/viewer.js";
 class FakeElement {
   readonly style: Record<string, string> = {};
   readonly children: FakeElement[] = [];
-  readonly listeners = new Map<string, Array<() => void | Promise<void>>>();
+  readonly listeners = new Map<string, Array<(event?: unknown) => void | Promise<void>>>();
   readonly attributes = new Map<string, string>();
+  private readonly classes = new Set<string>();
   readonly classList = {
-    add: vi.fn(),
-    remove: vi.fn(),
-    contains: vi.fn(() => false),
+    add: vi.fn((...names: string[]) => {
+      names.forEach((name) => this.classes.add(name));
+    }),
+    remove: vi.fn((...names: string[]) => {
+      names.forEach((name) => this.classes.delete(name));
+    }),
+    contains: vi.fn((name: string) => this.classes.has(name)),
+    toggle: vi.fn((name: string, force?: boolean) => {
+      if (force === true) {
+        this.classes.add(name);
+        return true;
+      }
+      if (force === false) {
+        this.classes.delete(name);
+        return false;
+      }
+      if (this.classes.has(name)) {
+        this.classes.delete(name);
+        return false;
+      }
+      this.classes.add(name);
+      return true;
+    }),
   };
   innerHTML = "";
   title = "";
   id = "";
   clientWidth = 0;
   clientHeight = 0;
+  dataset: Record<string, string> = {};
+  rect = { x: 0, y: 0, width: 0, height: 0 };
   requestFullscreen = vi.fn(() => Promise.resolve());
 
   constructor(private readonly doc: FakeDocument, id = "") {
@@ -40,18 +63,43 @@ class FakeElement {
     if (child.id) this.doc.register(child);
   }
 
-  addEventListener(type: string, listener: () => void | Promise<void>): void {
+  addEventListener(type: string, listener: (event?: unknown) => void | Promise<void>): void {
     const current = this.listeners.get(type) ?? [];
     current.push(listener);
     this.listeners.set(type, current);
   }
 
   async click(): Promise<void> {
-    for (const listener of this.listeners.get("click") ?? []) await listener();
+    await this.dispatch("click", { target: this, currentTarget: this });
+  }
+
+  async dispatch(type: string, event: Record<string, unknown> = {}): Promise<void> {
+    for (const listener of this.listeners.get(type) ?? []) {
+      await listener({ target: this, currentTarget: this, ...event });
+    }
   }
 
   querySelectorAll(): FakeElement[] {
     return [];
+  }
+
+  getBoundingClientRect() {
+    const { x, y, width, height } = this.rect.width || this.rect.height
+      ? this.rect
+      : { x: 0, y: 0, width: this.clientWidth, height: this.clientHeight };
+    return {
+      x,
+      y,
+      width,
+      height,
+      top: y,
+      left: x,
+      right: x + width,
+      bottom: y + height,
+      toJSON() {
+        return { x, y, width, height, top: y, left: x, right: x + width, bottom: y + height };
+      },
+    };
   }
 }
 
@@ -60,6 +108,8 @@ class FakeDocument {
   readonly listeners = new Map<string, Array<() => void>>();
   readonly body = new FakeElement(this, "body");
   readonly documentElement = new FakeElement(this, "document-element");
+  nodes: FakeElement[] = [];
+  edges: FakeElement[] = [];
   readonly defaultView = {
     location: { href: "https://diascope.biolytics.ai/examples/vllm/deployment.html?expandable" },
     open: vi.fn(),
@@ -94,6 +144,12 @@ class FakeDocument {
     return [];
   }
 
+  querySelectorAllBySelector(selector: string): FakeElement[] {
+    if (selector === ".d2-node") return this.nodes;
+    if (selector === ".d2-edge") return this.edges;
+    return [];
+  }
+
   addEventListener(type: string, listener: () => void): void {
     const current = this.listeners.get(type) ?? [];
     current.push(listener);
@@ -110,6 +166,7 @@ function createViewerHarness() {
   const canvasWrap = doc.register(new FakeElement(doc, "canvas-wrap"));
   canvasWrap.clientWidth = 556;
   canvasWrap.clientHeight = 291;
+  const panel = doc.register(new FakeElement(doc, "panel"));
   const svgHost = doc.register(new FakeElement(doc, "svg-host"));
   const svg = doc.register(new FakeElement(doc, "diagram-svg"));
   svgHost.appendChild(svg);
@@ -141,7 +198,7 @@ function createViewerHarness() {
     steps: [],
   });
 
-  return { doc, canvasWrap, svg, viewer, pz };
+  return { doc, canvasWrap, panel, svg, viewer, pz };
 }
 
 describe("DiaScopeViewer expand button", () => {
@@ -259,6 +316,81 @@ describe("DiaScopeViewer resize handling", () => {
     expect(pz.pan).toHaveBeenCalledWith({ x: 12, y: 24 });
     expect(pz.fit).not.toHaveBeenCalled();
     expect(pz.center).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("re-focuses the current step after a resize instead of restoring the old raw viewport", () => {
+    const addEventListener = vi.fn();
+    const removeEventListener = vi.fn();
+    vi.stubGlobal("window", { addEventListener, removeEventListener });
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      cb(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    const { doc, canvasWrap, viewer, pz } = createViewerHarness();
+    const node = new FakeElement(doc, "node-A");
+    node.dataset = { nodeId: "A" };
+    node.rect = { x: 120, y: 80, width: 90, height: 50 };
+    doc.nodes = [node];
+    doc.querySelectorAll = ((selector?: string) => doc.querySelectorAllBySelector(selector ?? "")) as typeof doc.querySelectorAll;
+
+    viewer.steps = [{ nodes: ["A"] }];
+    viewer.curStep = 0;
+
+    viewer.init();
+    const preResizeZoom = pz.getZoom();
+    const preResizePan = pz.getPan();
+    vi.clearAllMocks();
+
+    canvasWrap.clientWidth = 776;
+    canvasWrap.clientHeight = 560;
+    viewer.onResize?.();
+
+    expect(pz.resize).toHaveBeenCalledTimes(1);
+    expect(pz.fit).not.toHaveBeenCalled();
+    expect(pz.zoom).not.toHaveBeenCalledWith(preResizeZoom);
+    expect(pz.pan).not.toHaveBeenCalledWith(preResizePan);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("re-focuses the current step after the side panel width transition settles", async () => {
+    const addEventListener = vi.fn();
+    const removeEventListener = vi.fn();
+    vi.stubGlobal("window", { addEventListener, removeEventListener });
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      cb(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    const { doc, canvasWrap, panel, viewer, pz } = createViewerHarness();
+    const node = new FakeElement(doc, "node-A");
+    node.dataset = { nodeId: "A" };
+    node.rect = { x: 120, y: 80, width: 90, height: 50 };
+    doc.nodes = [node];
+    doc.querySelectorAll = ((selector?: string) => doc.querySelectorAllBySelector(selector ?? "")) as typeof doc.querySelectorAll;
+
+    viewer.steps = [{ nodes: ["A"] }];
+    viewer.curStep = 0;
+
+    viewer.init();
+    const preCollapseZoom = pz.getZoom();
+    const preCollapsePan = pz.getPan();
+    vi.clearAllMocks();
+
+    viewer.togglePanel();
+
+    canvasWrap.clientWidth = 776;
+    await panel.dispatch("transitionend", { propertyName: "width" });
+
+    expect(pz.resize).toHaveBeenCalledTimes(2);
+    expect(pz.fit).not.toHaveBeenCalled();
+    expect(pz.zoom).not.toHaveBeenCalledWith(preCollapseZoom);
+    expect(pz.pan).not.toHaveBeenCalledWith(preCollapsePan);
 
     vi.unstubAllGlobals();
   });

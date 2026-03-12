@@ -49,6 +49,7 @@ export class DiaScopeViewer {
   onMouseMove: ((e: MouseEvent) => void) | null = null;
   onCanvasClick: ((e: MouseEvent) => void) | null = null;
   onKeyDown: ((e: KeyboardEvent) => void) | null = null;
+  onPanelTransitionEnd: ((e: TransitionEvent) => void) | null = null;
 
   readonly doc: Document;
   readonly steps: Step[];
@@ -252,9 +253,15 @@ export class DiaScopeViewer {
 
     this.viewportSyncRaf = schedule(() => {
       this.viewportSyncRaf = null;
-      const desiredState = this.captureViewportState() ?? this.lastKnownViewport;
       if (!this.applyCanvasSize(targetSvg)) return;
       this.pz?.resize();
+      const activeNodes = this.curStep >= 0 ? this.steps[this.curStep]?.nodes ?? [] : [];
+      if (activeNodes.length) {
+        applyHighlight(this, activeNodes);
+        autoZoom(this, activeNodes);
+        return;
+      }
+      const desiredState = this.captureViewportState() ?? this.lastKnownViewport;
       if (!this.restoreViewport(desiredState)) this.recoverViewport();
     });
   }
@@ -404,6 +411,15 @@ export class DiaScopeViewer {
     bindKeyboard(this);
     if (this.autoBindControls) this.bindControls();
     this.syncPanelToggleButton();
+    const panel = this.doc.getElementById("panel");
+    if (panel) {
+      this.onPanelTransitionEnd = (e: TransitionEvent) => {
+        if (e.target !== panel) return;
+        if (e.propertyName !== "width" && e.propertyName !== "min-height") return;
+        this.onResize?.();
+      };
+      panel.addEventListener("transitionend", this.onPanelTransitionEnd);
+    }
 
     // Start at overview when configured at 'first' position; otherwise start at step 0
     if (this.overview && this.overview.position !== 'last') {
@@ -488,6 +504,7 @@ export class DiaScopeViewer {
     if (this.onMouseMove) this.doc.removeEventListener("mousemove", this.onMouseMove);
     if (this.onCanvasClick && this.canvasWrap) this.canvasWrap.removeEventListener("click", this.onCanvasClick);
     if (this.onKeyDown) this.doc.removeEventListener("keydown", this.onKeyDown);
+    if (this.onPanelTransitionEnd) this.doc.getElementById("panel")?.removeEventListener("transitionend", this.onPanelTransitionEnd);
     if (this.zoomRaf) cancelAnimationFrame(this.zoomRaf);
     if (this.viewportSyncRaf !== null && typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.viewportSyncRaf);
     this.narrowObserver?.disconnect();
