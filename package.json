@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "description": "Turn D2 diagrams into narrated interactive stories",
   "homepage": "https://diascope.biolytics.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Biolytics-AI/DiaScope.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Biolytics-AI/DiaScope/issues"
+  },
   "type": "module",
   "main": "./dist/viewer/index.js",
   "types": "./dist/viewer/index.d.ts",
