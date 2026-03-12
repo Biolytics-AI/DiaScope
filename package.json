@@ -1,6 +1,6 @@
 {
   "name": "@biolytics.ai/diascope",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Turn D2 diagrams into narrated interactive stories",
   "homepage": "https://diascope.biolytics.ai",
   "repository": {

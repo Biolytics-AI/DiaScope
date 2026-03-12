@@ -364,6 +364,10 @@ export class DiaScopeViewer {
     }
     const expandIcon = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="9,1 13,1 13,5"/><polyline points="5,13 1,13 1,9"/><line x1="13" y1="1" x2="8" y2="6"/><line x1="1" y1="13" x2="6" y2="8"/></svg>`;
     const collapseIcon = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="1,5 1,1 5,1"/><polyline points="9,13 13,13 13,9"/><line x1="1" y1="1" x2="6" y2="6"/><line x1="13" y1="13" x2="8" y2="8"/></svg>`;
+    const fullscreenTarget =
+      (this.getStoryShell() ?? this.canvasWrap ?? this.doc.documentElement) as (Element & {
+        requestFullscreen?: () => Promise<void>;
+      });
     const syncIcon = () => {
       const isFs = !!this.doc.fullscreenElement;
       btn!.innerHTML = isFs ? collapseIcon : expandIcon;
@@ -376,12 +380,15 @@ export class DiaScopeViewer {
     btn.style.justifyContent = "center";
     btn.addEventListener("click", () => {
       if (this.doc.fullscreenElement) {
-        this.doc.exitFullscreen();
+        void this.doc.exitFullscreen();
       } else {
-        this.doc.documentElement.requestFullscreen();
+        void fullscreenTarget.requestFullscreen?.();
       }
     });
-    this.doc.addEventListener("fullscreenchange", syncIcon);
+    this.doc.addEventListener("fullscreenchange", () => {
+      syncIcon();
+      this.onResize?.();
+    });
   }
 
   destroy(): void {
