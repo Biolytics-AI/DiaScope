@@ -19,7 +19,7 @@ diascope --version 2>/dev/null || echo "NOT INSTALLED"
 
 If not installed:
 ```bash
-npm install -g diascope
+npm install -g @biolytics-ai/diascope
 ```
 
 ---

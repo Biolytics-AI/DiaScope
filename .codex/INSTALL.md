@@ -23,7 +23,7 @@ Or manually:
 
 3. **Install the CLI:**
    ```bash
-   npm install -g diascope
+   npm install -g @biolytics-ai/diascope
    ```
 
 4. **Restart Codex.**
@@ -49,5 +49,5 @@ cd ~/.codex/diascope && git pull
 ```bash
 rm ~/.agents/skills/diascope
 rm -rf ~/.codex/diascope
-npm uninstall -g diascope
+npm uninstall -g @biolytics-ai/diascope
 ```

@@ -2,6 +2,7 @@
 
 [![Package CI](https://github.com/Biolytics-AI/DiaScope/actions/workflows/ci.yml/badge.svg)](https://github.com/Biolytics-AI/DiaScope/actions/workflows/ci.yml)
 [![Docs](https://github.com/Biolytics-AI/DiaScope/actions/workflows/docs.yml/badge.svg)](https://github.com/Biolytics-AI/DiaScope/actions/workflows/docs.yml)
+[![npm version](https://img.shields.io/npm/v/%40biolytics-ai%2Fdiascope)](https://www.npmjs.com/package/@biolytics-ai/diascope)
 [![Docs Site](https://img.shields.io/badge/docs-diascope.biolytics.ai-06E1EC)](https://diascope.biolytics.ai)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-002451)](https://nodejs.org/)
 
@@ -43,7 +44,7 @@ See the live example and feature docs at `https://diascope.biolytics.ai`.
 ## Install
 
 ```bash
-npm install -g diascope
+npm install -g @biolytics-ai/diascope
 ```
 
 ---
@@ -204,8 +205,8 @@ You can also browse the same example in the docs at `https://diascope.biolytics.
 Embed in a framework or custom shell:
 
 ```js
-import { DiaScopeViewer } from "diascope";
-import { parseStoryFile, storyToViewerOptions } from "diascope/story";
+import { DiaScopeViewer } from "@biolytics-ai/diascope";
+import { parseStoryFile, storyToViewerOptions } from "@biolytics-ai/diascope/story";
 
 const story = parseStoryFile(yamlString);
 const viewer = new DiaScopeViewer({
@@ -216,6 +217,19 @@ viewer.init();
 ```
 
 The viewer expects `svg-pan-zoom` on `window.svgPanZoom` (or via `options.svgPanZoom`). See [templates/story.html](templates/story.html) for a complete working shell.
+
+---
+
+## Release process
+
+DiaScope releases are published from GitHub, not from local machines.
+
+1. Open a PR into `main`.
+2. Merge only after `build-and-test` and `build-docs` pass.
+3. Create and push a version tag like `v0.1.0`.
+4. GitHub Actions publishes `@biolytics-ai/diascope` to npm and creates the matching GitHub Release.
+
+Local `npm publish` should only be used for dry-runs and debugging.
 
 ---
 

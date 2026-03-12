@@ -3,6 +3,8 @@ name: Deploy Docs
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -51,6 +53,7 @@ jobs:
           path: docs-site/dist
 
   deploy:
+    if: github.event_name == 'push'
     needs: build-docs
     runs-on: ubuntu-latest
     environment:
