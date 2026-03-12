@@ -252,9 +252,15 @@ export class DiaScopeViewer {
 
     this.viewportSyncRaf = schedule(() => {
       this.viewportSyncRaf = null;
-      const desiredState = this.captureViewportState() ?? this.lastKnownViewport;
       if (!this.applyCanvasSize(targetSvg)) return;
       this.pz?.resize();
+      const activeNodes = this.curStep >= 0 ? this.steps[this.curStep]?.nodes ?? [] : [];
+      if (activeNodes.length) {
+        applyHighlight(this, activeNodes);
+        autoZoom(this, activeNodes);
+        return;
+      }
+      const desiredState = this.captureViewportState() ?? this.lastKnownViewport;
       if (!this.restoreViewport(desiredState)) this.recoverViewport();
     });
   }

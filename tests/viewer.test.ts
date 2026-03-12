@@ -16,6 +16,8 @@ class FakeElement {
   id = "";
   clientWidth = 0;
   clientHeight = 0;
+  dataset: Record<string, string> = {};
+  rect = { x: 0, y: 0, width: 0, height: 0 };
   requestFullscreen = vi.fn(() => Promise.resolve());
 
   constructor(private readonly doc: FakeDocument, id = "") {
@@ -53,6 +55,25 @@ class FakeElement {
   querySelectorAll(): FakeElement[] {
     return [];
   }
+
+  getBoundingClientRect() {
+    const { x, y, width, height } = this.rect.width || this.rect.height
+      ? this.rect
+      : { x: 0, y: 0, width: this.clientWidth, height: this.clientHeight };
+    return {
+      x,
+      y,
+      width,
+      height,
+      top: y,
+      left: x,
+      right: x + width,
+      bottom: y + height,
+      toJSON() {
+        return { x, y, width, height, top: y, left: x, right: x + width, bottom: y + height };
+      },
+    };
+  }
 }
 
 class FakeDocument {
@@ -60,6 +81,8 @@ class FakeDocument {
   readonly listeners = new Map<string, Array<() => void>>();
   readonly body = new FakeElement(this, "body");
   readonly documentElement = new FakeElement(this, "document-element");
+  nodes: FakeElement[] = [];
+  edges: FakeElement[] = [];
   readonly defaultView = {
     location: { href: "https://diascope.biolytics.ai/examples/vllm/deployment.html?expandable" },
     open: vi.fn(),
@@ -91,6 +114,12 @@ class FakeDocument {
   }
 
   querySelectorAll(): FakeElement[] {
+    return [];
+  }
+
+  querySelectorAllBySelector(selector: string): FakeElement[] {
+    if (selector === ".d2-node") return this.nodes;
+    if (selector === ".d2-edge") return this.edges;
     return [];
   }
 
@@ -259,6 +288,43 @@ describe("DiaScopeViewer resize handling", () => {
     expect(pz.pan).toHaveBeenCalledWith({ x: 12, y: 24 });
     expect(pz.fit).not.toHaveBeenCalled();
     expect(pz.center).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("re-focuses the current step after a resize instead of restoring the old raw viewport", () => {
+    const addEventListener = vi.fn();
+    const removeEventListener = vi.fn();
+    vi.stubGlobal("window", { addEventListener, removeEventListener });
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      cb(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    const { doc, canvasWrap, viewer, pz } = createViewerHarness();
+    const node = new FakeElement(doc, "node-A");
+    node.dataset = { nodeId: "A" };
+    node.rect = { x: 120, y: 80, width: 90, height: 50 };
+    doc.nodes = [node];
+    doc.querySelectorAll = ((selector?: string) => doc.querySelectorAllBySelector(selector ?? "")) as typeof doc.querySelectorAll;
+
+    viewer.steps = [{ nodes: ["A"] }];
+    viewer.curStep = 0;
+
+    viewer.init();
+    const preResizeZoom = pz.getZoom();
+    const preResizePan = pz.getPan();
+    vi.clearAllMocks();
+
+    canvasWrap.clientWidth = 776;
+    canvasWrap.clientHeight = 560;
+    viewer.onResize?.();
+
+    expect(pz.resize).toHaveBeenCalledTimes(1);
+    expect(pz.fit).not.toHaveBeenCalled();
+    expect(pz.zoom).not.toHaveBeenCalledWith(preResizeZoom);
+    expect(pz.pan).not.toHaveBeenCalledWith(preResizePan);
 
     vi.unstubAllGlobals();
   });
