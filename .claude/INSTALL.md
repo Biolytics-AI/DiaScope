@@ -17,7 +17,7 @@ Adds the `narrate` skill to Claude Code so you can say "narrate this folder" and
 
 3. **Install the CLI** (required for the skill to build stories):
    ```bash
-   npm install -g @biolytics-ai/diascope
+   npm install -g @biolytics.ai/diascope
    ```
 
 4. **Restart Claude Code.**
@@ -58,5 +58,5 @@ cd ~/.claude/diascope && git pull
 ```bash
 rm ~/.agents/skills/diascope
 rm -rf ~/.claude/diascope
-npm uninstall -g @biolytics-ai/diascope
+npm uninstall -g @biolytics.ai/diascope
 ```
