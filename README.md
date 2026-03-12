@@ -18,6 +18,8 @@ Docs: `https://diascope.biolytics.ai`
 
 ## How it looks
 
+![DiaScope walkthrough](docs/demo.gif)
+
 Each story is a full-screen page: diagram on the left, narration panel on the right. Each step highlights the relevant nodes, pans/zooms to them, and shows the title + body text. Click a node for detail. Press `→` to advance.
 
 ## Interactive features

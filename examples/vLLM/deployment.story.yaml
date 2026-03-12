@@ -3,7 +3,7 @@ meta:
   d2_source: deployment.d2
 
 overview:
-  position: first
+  position: last
   title: "Compliant GPU Blueprint"
   body: |
     A step-by-step walkthrough of what a compliant external GPU deployment looks like

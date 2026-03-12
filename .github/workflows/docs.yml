@@ -41,8 +41,20 @@ jobs:
           curl -fsSL https://d2lang.com/install.sh | sh -s --
           d2 version
 
-      - name: Build package and docs assets
-        run: npm run docs:build
+      - name: Install ffmpeg
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build package
+        run: npm run build
+
+      - name: Record demo GIF
+        run: node scripts/record-demo.mjs --out docs-site/public/demo.gif
+
+      - name: Build docs assets and site
+        run: npm run docs:prepare-assets && npm --prefix docs-site run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
