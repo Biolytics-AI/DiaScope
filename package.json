@@ -19,6 +19,10 @@
   "bin": {
     "diascope": "./dist/cli/index.js"
   },
+  "files": [
+    "dist/",
+    "templates/"
+  ],
   "scripts": {
     "build": "tsc && node esbuild.mjs",
     "build:tsc": "tsc",
