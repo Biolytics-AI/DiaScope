@@ -3,3 +3,4 @@ dist/
 .history/
 docs/plans/
 .env
+.playwright-mcp/
