@@ -233,17 +233,41 @@ body::after {
 	}
 
 	.docs-story-embed {
-		width: min(112rem, calc(100vw - 24rem));
+		/* Cap width so it never overflows into the sidebar. */
+		width: min(80rem, calc(100vw - var(--sl-sidebar-width, 0rem) - 4rem));
 		max-width: none;
-		margin-left: 50%;
-		transform: translateX(-50%);
+		/*
+		 * margin-left: 50% is overridden to 0 by unlayered Starlight styles, so
+		 * the element's natural left edge sits at the start of .sl-markdown-content.
+		 * We need to shift it right by half the content column's width so it ends
+		 * up centred on the main content area (not on the column's left edge).
+		 * At narrow viewports where sl-content-width exceeds the available width
+		 * we clamp to (available-width / 2) instead.
+		 */
+		transform: translateX(calc(
+			-50% + min(
+				var(--sl-content-width, 45rem) / 2,
+				(100vw - var(--sl-sidebar-width, 0rem) - 2 * var(--sl-content-pad-x, 1.5rem)) / 2
+			)
+		));
+	}
+
+	/* Inside the already-wide page wrapper the embed just fills its container. */
+	.docs-example-page--wide .docs-story-embed {
+		width: 100%;
+		max-width: none;
+		transform: none;
 	}
 
 	.docs-example-page--wide {
-		width: min(112rem, calc(100vw - 22rem));
+		width: min(80rem, calc(100vw - var(--sl-sidebar-width, 0rem) - 4rem));
 		max-width: none;
-		margin-left: 50%;
-		transform: translateX(-50%);
+		transform: translateX(calc(
+			-50% + min(
+				var(--sl-content-width, 45rem) / 2,
+				(100vw - var(--sl-sidebar-width, 0rem) - 2 * var(--sl-content-pad-x, 1.5rem)) / 2
+			)
+		));
 	}
 
 	.docs-story-frame {
