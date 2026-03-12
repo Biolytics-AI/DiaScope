@@ -18,8 +18,8 @@ describe("docs example page", () => {
     expect(walkthroughHeading).toBeGreaterThan(exampleHeading);
   });
 
-  it("adds a page-specific pop-out control for the standalone example", () => {
-    expect(source).toContain("docs-story-popout");
-    expect(source).toContain('href="/examples/vllm/deployment.html"');
+  it("embeds the viewer with the expandable flag so the built-in expand button is shown", () => {
+    expect(source).toContain("docs-story-embed");
+    expect(source).toContain('src="/examples/vllm/deployment.html?expandable"');
   });
 });
