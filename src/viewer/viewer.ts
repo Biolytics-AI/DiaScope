@@ -1,4 +1,4 @@
-import { applyHighlight } from "./highlight.js";
+import { applyHighlight, autoZoom } from "./highlight.js";
 import { goStep, toggleFocus, resetOverview, bindKeyboard, renderBody } from "./navigation.js";
 import { tagNodes, tagEdges, setupEdgeTooltips } from "./tagging.js";
 import type { Step, ViewerOptions, ViewerSelectors, SvgPanZoom } from "./types.js";
@@ -70,6 +70,9 @@ export class DiaScopeViewer {
   readonly narrowBreakpoint: number;
   readonly overview: ViewerOptions['overview'];
   private narrowObserver: ResizeObserver | null = null;
+  private canvasObserver: ResizeObserver | null = null;
+  private viewportSyncRaf: number | null = null;
+  private lastKnownViewport: { zoom: number; pan: { x: number; y: number } } | null = null;
   private readonly svgPanZoomImpl: ((svg: SVGElement, opts: Record<string, unknown>) => SvgPanZoom) | undefined;
 
   constructor(options: ViewerOptions) {
@@ -188,6 +191,74 @@ export class DiaScopeViewer {
     return this.doc.querySelector("#story-shell");
   }
 
+  private captureViewportState(): { zoom: number; pan: { x: number; y: number } } | null {
+    if (!this.pz) return null;
+    const zoom = this.pz.getZoom();
+    const pan = this.pz.getPan();
+    if (!Number.isFinite(zoom) || zoom <= 0) return null;
+    if (!Number.isFinite(pan.x) || !Number.isFinite(pan.y)) return null;
+    return { zoom, pan: { x: pan.x, y: pan.y } };
+  }
+
+  private applyCanvasSize(targetSvg: SVGElement): boolean {
+    if (!this.canvasWrap) return false;
+    const width = this.canvasWrap.clientWidth;
+    const height = this.canvasWrap.clientHeight;
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1) return false;
+    targetSvg.setAttribute("width", String(width));
+    targetSvg.setAttribute("height", String(height));
+    return true;
+  }
+
+  private restoreViewport(state: { zoom: number; pan: { x: number; y: number } } | null): boolean {
+    if (!this.pz || !state) return false;
+    this.pz.zoom(state.zoom);
+    this.pz.pan(state.pan);
+    const restored = this.captureViewportState();
+    if (!restored) return false;
+    this.lastKnownViewport = restored;
+    return true;
+  }
+
+  private recoverViewport(): void {
+    if (this.restoreViewport(this.lastKnownViewport)) return;
+    if (!this.pz) return;
+    this.pz.fit();
+    this.pz.center();
+    this.applyMinInitialZoom();
+    const recovered = this.captureViewportState();
+    if (recovered) {
+      this.lastKnownViewport = recovered;
+      return;
+    }
+    const nodes = this.curStep >= 0 ? this.steps[this.curStep]?.nodes ?? [] : [];
+    if (nodes.length) autoZoom(this, nodes);
+  }
+
+  private queueViewportSync(): void {
+    const targetSvg = this.getDiagramSvg();
+    if (!targetSvg) return;
+
+    if (this.viewportSyncRaf !== null && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this.viewportSyncRaf);
+    }
+
+    const schedule = typeof requestAnimationFrame === "function"
+      ? requestAnimationFrame
+      : ((cb: FrameRequestCallback) => {
+          cb(0);
+          return 0;
+        });
+
+    this.viewportSyncRaf = schedule(() => {
+      this.viewportSyncRaf = null;
+      const desiredState = this.captureViewportState() ?? this.lastKnownViewport;
+      if (!this.applyCanvasSize(targetSvg)) return;
+      this.pz?.resize();
+      if (!this.restoreViewport(desiredState)) this.recoverViewport();
+    });
+  }
+
   syncPanelToggleButton(): void {
     if (!this.panelToggleBtn) return;
     const shell = this.getStoryShell();
@@ -206,9 +277,7 @@ export class DiaScopeViewer {
     if (!storyShell) return;
     storyShell.classList.toggle("panel-collapsed");
     this.syncPanelToggleButton();
-    this.pz?.resize();
-    this.pz?.fit();
-    this.pz?.center();
+    this.onResize?.();
   }
 
   bindControls(): void {
@@ -288,15 +357,13 @@ export class DiaScopeViewer {
     const targetSvg = this.getDiagramSvg();
     if (!targetSvg) return;
 
-    const resize = () => {
-      if (!this.canvasWrap) return;
-      targetSvg.setAttribute("width", String(this.canvasWrap.clientWidth));
-      targetSvg.setAttribute("height", String(this.canvasWrap.clientHeight));
-      this.pz?.resize();
-    };
-    resize();
-    this.onResize = () => { resize(); this.pz?.fit(); this.pz?.center(); };
+    this.applyCanvasSize(targetSvg);
+    this.onResize = () => this.queueViewportSync();
     window.addEventListener("resize", this.onResize);
+
+    const { onUpdatedCTM: userOnUpdatedCTM, ...panZoomOptions } = this.panZoomOptions as Record<string, unknown> & {
+      onUpdatedCTM?: ((ctm: { a: number; e: number; f: number }) => void);
+    };
 
     this.pz = this.svgPanZoomImpl(targetSvg, {
       zoomEnabled: true,
@@ -306,9 +373,21 @@ export class DiaScopeViewer {
       minZoom: this.panZoomMin,
       maxZoom: this.panZoomMax,
       zoomScaleSensitivity: 0.15,
-      ...this.panZoomOptions,
+      ...panZoomOptions,
+      onUpdatedCTM: (ctm: { a: number; e: number; f: number }) => {
+        if (Number.isFinite(ctm.a) && ctm.a > 0 && Number.isFinite(ctm.e) && Number.isFinite(ctm.f)) {
+          this.lastKnownViewport = { zoom: ctm.a, pan: { x: ctm.e, y: ctm.f } };
+        }
+        userOnUpdatedCTM?.(ctm);
+      },
     });
     this.applyMinInitialZoom();
+    this.lastKnownViewport = this.captureViewportState();
+
+    if (typeof ResizeObserver !== "undefined") {
+      this.canvasObserver = new ResizeObserver(() => this.onResize?.());
+      this.canvasObserver.observe(this.canvasWrap);
+    }
 
     tagNodes(this);
     tagEdges(this);
@@ -347,8 +426,8 @@ export class DiaScopeViewer {
       shell.classList.toggle("narrow", (e.contentRect.width) < this.narrowBreakpoint);
       const isNarrow = shell.classList.contains("narrow");
       this.syncPanelToggleButton();
-      // If layout mode changed, canvas height changed — re-sync SVG size and fit
-      if (wasNarrow !== isNarrow) this.onResize?.();
+      // Layout mode changes alter the real canvas size; queue a re-sync if there is no canvas observer.
+      if (wasNarrow !== isNarrow && !this.canvasObserver) this.onResize?.();
     });
     this.narrowObserver.observe(shell);
   }
@@ -378,11 +457,24 @@ export class DiaScopeViewer {
     btn.style.display = "flex";
     btn.style.alignItems = "center";
     btn.style.justifyContent = "center";
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       if (this.doc.fullscreenElement) {
         void this.doc.exitFullscreen();
-      } else {
-        void fullscreenTarget.requestFullscreen?.();
+        return;
+      }
+      try {
+        if (fullscreenTarget.requestFullscreen) {
+          await fullscreenTarget.requestFullscreen();
+          return;
+        }
+      } catch {
+        // Fallback handled below for embeds that block fullscreen.
+      }
+      const win = this.doc.defaultView;
+      if (win?.open) {
+        const url = new URL(win.location.href);
+        url.searchParams.delete("expandable");
+        win.open(url.toString(), "_blank", "noopener,noreferrer");
       }
     });
     this.doc.addEventListener("fullscreenchange", () => {
@@ -397,7 +489,9 @@ export class DiaScopeViewer {
     if (this.onCanvasClick && this.canvasWrap) this.canvasWrap.removeEventListener("click", this.onCanvasClick);
     if (this.onKeyDown) this.doc.removeEventListener("keydown", this.onKeyDown);
     if (this.zoomRaf) cancelAnimationFrame(this.zoomRaf);
+    if (this.viewportSyncRaf !== null && typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.viewportSyncRaf);
     this.narrowObserver?.disconnect();
+    this.canvasObserver?.disconnect();
     this.pz?.destroy?.();
   }
 }

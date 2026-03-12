@@ -601,6 +601,9 @@ var DiaScopeBundle = (() => {
       this.onCanvasClick = null;
       this.onKeyDown = null;
       this.narrowObserver = null;
+      this.canvasObserver = null;
+      this.viewportSyncRaf = null;
+      this.lastKnownViewport = null;
       this.doc = options.document ?? document;
       this.steps = options.steps ?? [];
       this.nodeIds = options.nodeIds ?? [];
@@ -694,6 +697,64 @@ var DiaScopeBundle = (() => {
     getStoryShell() {
       return this.doc.querySelector("#story-shell");
     }
+    captureViewportState() {
+      if (!this.pz) return null;
+      const zoom = this.pz.getZoom();
+      const pan = this.pz.getPan();
+      if (!Number.isFinite(zoom) || zoom <= 0) return null;
+      if (!Number.isFinite(pan.x) || !Number.isFinite(pan.y)) return null;
+      return { zoom, pan: { x: pan.x, y: pan.y } };
+    }
+    applyCanvasSize(targetSvg) {
+      if (!this.canvasWrap) return false;
+      const width = this.canvasWrap.clientWidth;
+      const height = this.canvasWrap.clientHeight;
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1) return false;
+      targetSvg.setAttribute("width", String(width));
+      targetSvg.setAttribute("height", String(height));
+      return true;
+    }
+    restoreViewport(state) {
+      if (!this.pz || !state) return false;
+      this.pz.zoom(state.zoom);
+      this.pz.pan(state.pan);
+      const restored = this.captureViewportState();
+      if (!restored) return false;
+      this.lastKnownViewport = restored;
+      return true;
+    }
+    recoverViewport() {
+      if (this.restoreViewport(this.lastKnownViewport)) return;
+      if (!this.pz) return;
+      this.pz.fit();
+      this.pz.center();
+      this.applyMinInitialZoom();
+      const recovered = this.captureViewportState();
+      if (recovered) {
+        this.lastKnownViewport = recovered;
+        return;
+      }
+      const nodes = this.curStep >= 0 ? this.steps[this.curStep]?.nodes ?? [] : [];
+      if (nodes.length) autoZoom(this, nodes);
+    }
+    queueViewportSync() {
+      const targetSvg = this.getDiagramSvg();
+      if (!targetSvg) return;
+      if (this.viewportSyncRaf !== null && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(this.viewportSyncRaf);
+      }
+      const schedule = typeof requestAnimationFrame === "function" ? requestAnimationFrame : (cb) => {
+        cb(0);
+        return 0;
+      };
+      this.viewportSyncRaf = schedule(() => {
+        this.viewportSyncRaf = null;
+        const desiredState = this.captureViewportState() ?? this.lastKnownViewport;
+        if (!this.applyCanvasSize(targetSvg)) return;
+        this.pz?.resize();
+        if (!this.restoreViewport(desiredState)) this.recoverViewport();
+      });
+    }
     syncPanelToggleButton() {
       if (!this.panelToggleBtn) return;
       const shell = this.getStoryShell();
@@ -709,9 +770,7 @@ var DiaScopeBundle = (() => {
       if (!storyShell) return;
       storyShell.classList.toggle("panel-collapsed");
       this.syncPanelToggleButton();
-      this.pz?.resize();
-      this.pz?.fit();
-      this.pz?.center();
+      this.onResize?.();
     }
     bindControls() {
       this.doc.querySelectorAll(this.selectors.stepButtons).forEach((btn) => {
@@ -778,19 +837,10 @@ var DiaScopeBundle = (() => {
       if (!this.canvasWrap || !this.svgHost || !this.svgPanZoomImpl) return;
       const targetSvg = this.getDiagramSvg();
       if (!targetSvg) return;
-      const resize = () => {
-        if (!this.canvasWrap) return;
-        targetSvg.setAttribute("width", String(this.canvasWrap.clientWidth));
-        targetSvg.setAttribute("height", String(this.canvasWrap.clientHeight));
-        this.pz?.resize();
-      };
-      resize();
-      this.onResize = () => {
-        resize();
-        this.pz?.fit();
-        this.pz?.center();
-      };
+      this.applyCanvasSize(targetSvg);
+      this.onResize = () => this.queueViewportSync();
       window.addEventListener("resize", this.onResize);
+      const { onUpdatedCTM: userOnUpdatedCTM, ...panZoomOptions } = this.panZoomOptions;
       this.pz = this.svgPanZoomImpl(targetSvg, {
         zoomEnabled: true,
         controlIconsEnabled: false,
@@ -799,9 +849,20 @@ var DiaScopeBundle = (() => {
         minZoom: this.panZoomMin,
         maxZoom: this.panZoomMax,
         zoomScaleSensitivity: 0.15,
-        ...this.panZoomOptions
+        ...panZoomOptions,
+        onUpdatedCTM: (ctm) => {
+          if (Number.isFinite(ctm.a) && ctm.a > 0 && Number.isFinite(ctm.e) && Number.isFinite(ctm.f)) {
+            this.lastKnownViewport = { zoom: ctm.a, pan: { x: ctm.e, y: ctm.f } };
+          }
+          userOnUpdatedCTM?.(ctm);
+        }
       });
       this.applyMinInitialZoom();
+      this.lastKnownViewport = this.captureViewportState();
+      if (typeof ResizeObserver !== "undefined") {
+        this.canvasObserver = new ResizeObserver(() => this.onResize?.());
+        this.canvasObserver.observe(this.canvasWrap);
+      }
       tagNodes(this);
       tagEdges(this);
       setupEdgeTooltips(this);
@@ -834,7 +895,7 @@ var DiaScopeBundle = (() => {
         shell.classList.toggle("narrow", e.contentRect.width < this.narrowBreakpoint);
         const isNarrow = shell.classList.contains("narrow");
         this.syncPanelToggleButton();
-        if (wasNarrow !== isNarrow) this.onResize?.();
+        if (wasNarrow !== isNarrow && !this.canvasObserver) this.onResize?.();
       });
       this.narrowObserver.observe(shell);
     }
@@ -860,11 +921,23 @@ var DiaScopeBundle = (() => {
       btn.style.display = "flex";
       btn.style.alignItems = "center";
       btn.style.justifyContent = "center";
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         if (this.doc.fullscreenElement) {
           void this.doc.exitFullscreen();
-        } else {
-          void fullscreenTarget.requestFullscreen?.();
+          return;
+        }
+        try {
+          if (fullscreenTarget.requestFullscreen) {
+            await fullscreenTarget.requestFullscreen();
+            return;
+          }
+        } catch {
+        }
+        const win = this.doc.defaultView;
+        if (win?.open) {
+          const url = new URL(win.location.href);
+          url.searchParams.delete("expandable");
+          win.open(url.toString(), "_blank", "noopener,noreferrer");
         }
       });
       this.doc.addEventListener("fullscreenchange", () => {
@@ -878,7 +951,9 @@ var DiaScopeBundle = (() => {
       if (this.onCanvasClick && this.canvasWrap) this.canvasWrap.removeEventListener("click", this.onCanvasClick);
       if (this.onKeyDown) this.doc.removeEventListener("keydown", this.onKeyDown);
       if (this.zoomRaf) cancelAnimationFrame(this.zoomRaf);
+      if (this.viewportSyncRaf !== null && typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.viewportSyncRaf);
       this.narrowObserver?.disconnect();
+      this.canvasObserver?.disconnect();
       this.pz?.destroy?.();
     }
   };
