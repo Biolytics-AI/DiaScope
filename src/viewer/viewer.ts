@@ -190,8 +190,12 @@ export class DiaScopeViewer {
 
   syncPanelToggleButton(): void {
     if (!this.panelToggleBtn) return;
-    const collapsed = this.getStoryShell()?.classList.contains("panel-collapsed") ?? false;
-    this.panelToggleBtn.textContent = collapsed ? "<" : ">";
+    const shell = this.getStoryShell();
+    const collapsed = shell?.classList.contains("panel-collapsed") ?? false;
+    const narrow = shell?.classList.contains("narrow") ?? false;
+    this.panelToggleBtn.textContent = narrow
+      ? (collapsed ? "∧" : "∨")
+      : (collapsed ? "<" : ">");
     this.panelToggleBtn.title = collapsed ? "Expand narration" : "Collapse narration";
     this.panelToggleBtn.setAttribute("aria-label", collapsed ? "Expand narration" : "Collapse narration");
     this.panelToggleBtn.setAttribute("aria-expanded", String(!collapsed));
@@ -301,7 +305,7 @@ export class DiaScopeViewer {
       center: true,
       minZoom: this.panZoomMin,
       maxZoom: this.panZoomMax,
-      zoomScaleSensitivity: 0.3,
+      zoomScaleSensitivity: 0.15,
       ...this.panZoomOptions,
     });
     this.applyMinInitialZoom();
@@ -340,6 +344,7 @@ export class DiaScopeViewer {
     if (!shell) return;
     this.narrowObserver = new ResizeObserver(([e]) => {
       shell.classList.toggle("narrow", (e.contentRect.width) < this.narrowBreakpoint);
+      this.syncPanelToggleButton();
     });
     this.narrowObserver.observe(shell);
   }
@@ -353,16 +358,26 @@ export class DiaScopeViewer {
       btn.style.cssText = "position:absolute;top:10px;right:10px;z-index:20;width:28px;height:28px;border-radius:999px;border:1px solid #cbd5e0;background:rgba(255,255,255,0.92);color:#4a5568;cursor:pointer;padding:0;";
       this.canvasWrap.appendChild(btn);
     }
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="9,1 13,1 13,5"/><polyline points="5,13 1,13 1,9"/><line x1="13" y1="1" x2="8" y2="6"/><line x1="1" y1="13" x2="6" y2="8"/></svg>`;
-    btn.title = "Open in full view";
-    btn.setAttribute("aria-label", "Open in full view");
+    const expandIcon = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="9,1 13,1 13,5"/><polyline points="5,13 1,13 1,9"/><line x1="13" y1="1" x2="8" y2="6"/><line x1="1" y1="13" x2="6" y2="8"/></svg>`;
+    const collapseIcon = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="1,5 1,1 5,1"/><polyline points="9,13 13,13 13,9"/><line x1="1" y1="1" x2="6" y2="6"/><line x1="13" y1="13" x2="8" y2="8"/></svg>`;
+    const syncIcon = () => {
+      const isFs = !!this.doc.fullscreenElement;
+      btn!.innerHTML = isFs ? collapseIcon : expandIcon;
+      btn!.title = isFs ? "Exit full view" : "Open in full view";
+      btn!.setAttribute("aria-label", isFs ? "Exit full view" : "Open in full view");
+    };
+    syncIcon();
     btn.style.display = "flex";
     btn.style.alignItems = "center";
     btn.style.justifyContent = "center";
     btn.addEventListener("click", () => {
-      const url = window.location.href.replace(/[?&]expandable=?1?/, "").replace(/\?$/, "");
-      window.open(url, "_blank");
+      if (this.doc.fullscreenElement) {
+        this.doc.exitFullscreen();
+      } else {
+        this.doc.documentElement.requestFullscreen();
+      }
     });
+    this.doc.addEventListener("fullscreenchange", syncIcon);
   }
 
   destroy(): void {

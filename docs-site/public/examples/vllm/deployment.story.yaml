@@ -2,6 +2,17 @@ meta:
   title: "Compliant GPU Blueprint"
   d2_source: deployment.d2
 
+overview:
+  position: first
+  title: "Compliant GPU Blueprint"
+  body: |
+    A step-by-step walkthrough of what a compliant external GPU deployment looks like
+    for clinical AI: who controls what, where data crosses boundaries, and what evidence
+    must be in place before production traffic is allowed.
+
+    Use the numbered steps to walk through the key decision points, or click any node
+    for detail on that component.
+
 detail_panels:
   HealthcareProvider.Controls.ClientAuth: |
     <p>This is the last provider-controlled gate before clinical context leaves the current hosting boundary.</p>

@@ -11,11 +11,12 @@
     #canvas-wrap { flex: 1; position: relative; overflow: hidden; min-width: 0; background-color: #f5f7fa; background-image: radial-gradient(circle, #d0d7e3 1.5px, transparent 1.5px); background-size: 22px 22px; }
     #svg-host { width: 100%; height: 100%; }
     #svg-host svg { display: block; }
+    #svg-host svg rect[stroke="transparent"] { fill: transparent; }
     #panel { width: min(320px, 35%); display: flex; flex-direction: column; border-left: 1px solid #e2e8f0; background: #ffffff; position: relative; transition: width 0.18s ease; }
-    #panel-header { display: flex; justify-content: flex-start; padding: 10px 12px 0; }
-    #btn-panel-toggle { width: 28px; height: 28px; border-radius: 999px; border: 1px solid #cbd5e0; background: rgba(255,255,255,0.92); color: #718096; cursor: pointer; font-size: 14px; line-height: 1; }
+    #step-nav-bar { display: flex; align-items: flex-start; gap: 4px; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+    #step-nav { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+    #btn-panel-toggle { flex-shrink: 0; width: 28px; height: 28px; border-radius: 999px; border: 1px solid #cbd5e0; background: rgba(255,255,255,0.92); color: #718096; cursor: pointer; font-size: 14px; line-height: 1; margin-top: 1px; }
     #btn-panel-toggle:hover { background: #edf2f7; }
-    #step-nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 12px; border-bottom: 1px solid #e2e8f0; }
     .step-btn { padding: 4px 10px; border-radius: 4px; border: 1px solid #cbd5e0; background: transparent; color: #718096; cursor: pointer; font-size: 12px; }
     .step-btn:hover { background: #edf2f7; }
     .step-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
@@ -30,10 +31,10 @@
     #toolbar button { flex: 1; padding: 5px 0; border-radius: 4px; border: 1px solid #cbd5e0; background: transparent; color: #4a5568; cursor: pointer; font-size: 11px; }
     #toolbar button:hover { background: #edf2f7; }
     #story-shell.panel-collapsed #panel { width: 52px; min-width: 52px; }
-    #story-shell.panel-collapsed #step-nav,
+    #story-shell.panel-collapsed #step-nav { display: none; }
     #story-shell.panel-collapsed #step-content,
     #story-shell.panel-collapsed #toolbar { display: none; }
-    #story-shell.panel-collapsed #panel-header { padding: 12px; }
+    #story-shell.panel-collapsed #step-nav-bar { justify-content: center; }
     #story-shell.narrow { flex-direction: column; }
     #story-shell.narrow #canvas-wrap { min-height: 52vh; }
     #story-shell.narrow #panel { width: 100%; border-left: 0; border-top: 1px solid #e2e8f0; min-height: 48vh; }
@@ -41,6 +42,7 @@
     #story-shell.overview-mode #step-content,
     #story-shell.overview-mode #toolbar { display: none; }
     #story-shell.narrow.panel-collapsed #panel { width: 100%; min-width: 0; min-height: 52px; }
+    #story-shell.narrow.panel-collapsed #step-nav-bar { justify-content: flex-end; }
     #btn-expand { position: absolute; top: 10px; right: 10px; z-index: 20; width: 28px; height: 28px; border-radius: 999px; border: 1px solid #cbd5e0; background: rgba(255,255,255,0.92); color: #4a5568; cursor: pointer; display: none; align-items: center; justify-content: center; padding: 0; }
     #btn-expand:hover { background: #edf2f7; }
     #detail-drawer { position: absolute; right: 0; top: 0; width: 280px; height: 100%; background: #ffffff; border-left: 1px solid #e2e8f0; padding: 16px; transform: translateX(100%); transition: transform 0.2s; overflow-y: auto; z-index: 10; }
@@ -202,15 +204,16 @@
       </div>
     </div>
     <div id="panel">
-      <div id="panel-header">
-        <button id="btn-panel-toggle" type="button" title="Collapse narration" aria-label="Collapse narration" aria-expanded="true">></button>
-      </div>
-      <div id="step-nav"><button class="step-btn" data-step="0">01</button>
+      <div id="step-nav-bar">
+        <div id="step-nav"><button class="step-btn" data-step="all">All</button>
+<button class="step-btn" data-step="0">01</button>
 <button class="step-btn" data-step="1">02</button>
 <button class="step-btn" data-step="2">03</button>
 <button class="step-btn" data-step="3">04</button>
 <button class="step-btn" data-step="4">05</button>
 <button class="step-btn" data-step="5">06</button></div>
+        <button id="btn-panel-toggle" type="button" title="Collapse narration" aria-label="Collapse narration" aria-expanded="true">></button>
+      </div>
       <div id="step-content">
         <div id="step-tag"></div>
         <div id="step-title"></div>
@@ -693,8 +696,10 @@ var DiaScopeBundle = (() => {
     }
     syncPanelToggleButton() {
       if (!this.panelToggleBtn) return;
-      const collapsed = this.getStoryShell()?.classList.contains("panel-collapsed") ?? false;
-      this.panelToggleBtn.textContent = collapsed ? "<" : ">";
+      const shell = this.getStoryShell();
+      const collapsed = shell?.classList.contains("panel-collapsed") ?? false;
+      const narrow = shell?.classList.contains("narrow") ?? false;
+      this.panelToggleBtn.textContent = narrow ? collapsed ? "\u2227" : "\u2228" : collapsed ? "<" : ">";
       this.panelToggleBtn.title = collapsed ? "Expand narration" : "Collapse narration";
       this.panelToggleBtn.setAttribute("aria-label", collapsed ? "Expand narration" : "Collapse narration");
       this.panelToggleBtn.setAttribute("aria-expanded", String(!collapsed));
@@ -793,7 +798,7 @@ var DiaScopeBundle = (() => {
         center: true,
         minZoom: this.panZoomMin,
         maxZoom: this.panZoomMax,
-        zoomScaleSensitivity: 0.3,
+        zoomScaleSensitivity: 0.15,
         ...this.panZoomOptions
       });
       this.applyMinInitialZoom();
@@ -826,6 +831,7 @@ var DiaScopeBundle = (() => {
       if (!shell) return;
       this.narrowObserver = new ResizeObserver(([e]) => {
         shell.classList.toggle("narrow", e.contentRect.width < this.narrowBreakpoint);
+        this.syncPanelToggleButton();
       });
       this.narrowObserver.observe(shell);
     }
@@ -838,16 +844,26 @@ var DiaScopeBundle = (() => {
         btn.style.cssText = "position:absolute;top:10px;right:10px;z-index:20;width:28px;height:28px;border-radius:999px;border:1px solid #cbd5e0;background:rgba(255,255,255,0.92);color:#4a5568;cursor:pointer;padding:0;";
         this.canvasWrap.appendChild(btn);
       }
-      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="9,1 13,1 13,5"/><polyline points="5,13 1,13 1,9"/><line x1="13" y1="1" x2="8" y2="6"/><line x1="1" y1="13" x2="6" y2="8"/></svg>`;
-      btn.title = "Open in full view";
-      btn.setAttribute("aria-label", "Open in full view");
+      const expandIcon = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="9,1 13,1 13,5"/><polyline points="5,13 1,13 1,9"/><line x1="13" y1="1" x2="8" y2="6"/><line x1="1" y1="13" x2="6" y2="8"/></svg>`;
+      const collapseIcon = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="1,5 1,1 5,1"/><polyline points="9,13 13,13 13,9"/><line x1="1" y1="1" x2="6" y2="6"/><line x1="13" y1="13" x2="8" y2="8"/></svg>`;
+      const syncIcon = () => {
+        const isFs = !!this.doc.fullscreenElement;
+        btn.innerHTML = isFs ? collapseIcon : expandIcon;
+        btn.title = isFs ? "Exit full view" : "Open in full view";
+        btn.setAttribute("aria-label", isFs ? "Exit full view" : "Open in full view");
+      };
+      syncIcon();
       btn.style.display = "flex";
       btn.style.alignItems = "center";
       btn.style.justifyContent = "center";
       btn.addEventListener("click", () => {
-        const url = window.location.href.replace(/[?&]expandable=?1?/, "").replace(/\?$/, "");
-        window.open(url, "_blank");
+        if (this.doc.fullscreenElement) {
+          this.doc.exitFullscreen();
+        } else {
+          this.doc.documentElement.requestFullscreen();
+        }
       });
+      this.doc.addEventListener("fullscreenchange", syncIcon);
     }
     destroy() {
       if (this.onResize) window.removeEventListener("resize", this.onResize);
@@ -971,6 +987,11 @@ var DiaScopeBundle = (() => {
     "authenticated request carrying clinical context": "This edge marks the handoff into externally hosted AI processing.",
     "writes operational metadata": "Audit events should avoid plaintext prompt and response content.",
     "provider access and facility trail": "Infrastructure-side evidence remains necessary even when the application stack is self-managed."
+  },
+  "overview": {
+    "position": "first",
+    "title": "Compliant GPU Blueprint",
+    "body": "A step-by-step walkthrough of what a compliant external GPU deployment looks like\nfor clinical AI: who controls what, where data crosses boundaries, and what evidence\nmust be in place before production traffic is allowed.\n\nUse the numbered steps to walk through the key decision points, or click any node\nfor detail on that component.\n"
   }
 };
     const _p = new URLSearchParams(location.search);
