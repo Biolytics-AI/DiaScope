@@ -343,8 +343,12 @@ export class DiaScopeViewer {
     const shell = this.getStoryShell();
     if (!shell) return;
     this.narrowObserver = new ResizeObserver(([e]) => {
+      const wasNarrow = shell.classList.contains("narrow");
       shell.classList.toggle("narrow", (e.contentRect.width) < this.narrowBreakpoint);
+      const isNarrow = shell.classList.contains("narrow");
       this.syncPanelToggleButton();
+      // If layout mode changed, canvas height changed — re-sync SVG size and fit
+      if (wasNarrow !== isNarrow) this.onResize?.();
     });
     this.narrowObserver.observe(shell);
   }
