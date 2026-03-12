@@ -233,43 +233,45 @@ body::after {
 	}
 
 	.docs-story-embed {
-		width: min(112rem, calc(100vw - 24rem));
+		/* Cap width so it never overflows into the sidebar. */
+		width: min(80rem, calc(100vw - var(--sl-sidebar-width, 0rem) - 4rem));
 		max-width: none;
-		margin-left: 50%;
-		transform: translateX(-50%);
+		/*
+		 * margin-left: 50% is overridden to 0 by unlayered Starlight styles, so
+		 * the element's natural left edge sits at the start of .sl-markdown-content.
+		 * We need to shift it right by half the content column's width so it ends
+		 * up centred on the main content area (not on the column's left edge).
+		 * At narrow viewports where sl-content-width exceeds the available width
+		 * we clamp to (available-width / 2) instead.
+		 */
+		transform: translateX(calc(
+			-50% + min(
+				var(--sl-content-width, 45rem) / 2,
+				(100vw - var(--sl-sidebar-width, 0rem) - 2 * var(--sl-content-pad-x, 1.5rem)) / 2
+			)
+		));
+	}
+
+	/* Inside the already-wide page wrapper the embed just fills its container. */
+	.docs-example-page--wide .docs-story-embed {
+		width: 100%;
+		max-width: none;
+		transform: none;
 	}
 
 	.docs-example-page--wide {
-		width: min(112rem, calc(100vw - 22rem));
+		width: min(80rem, calc(100vw - var(--sl-sidebar-width, 0rem) - 4rem));
 		max-width: none;
-		margin-left: 50%;
-		transform: translateX(-50%);
+		transform: translateX(calc(
+			-50% + min(
+				var(--sl-content-width, 45rem) / 2,
+				(100vw - var(--sl-sidebar-width, 0rem) - 2 * var(--sl-content-pad-x, 1.5rem)) / 2
+			)
+		));
 	}
 
 	.docs-story-frame {
 		position: relative;
-		padding-top: 3.5rem;
-	}
-
-	.docs-story-popout {
-		position: absolute;
-		top: 0;
-		left: 0;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.65rem 0.95rem;
-		border-radius: 999px;
-		background: var(--brand-glass-bg);
-		border: 1px solid var(--brand-glass-border);
-		box-shadow: var(--brand-shadow-sm);
-		font-weight: 500;
-		text-decoration: none;
-	}
-
-	.docs-story-popout:hover {
-		border-color: rgba(6, 225, 236, 0.3);
-		box-shadow: var(--brand-shadow);
 	}
 
 	.docs-story-embed iframe {
@@ -292,15 +294,6 @@ body::after {
 	}
 
 	@media (max-width: 50rem) {
-		.docs-story-frame {
-			padding-top: 3.25rem;
-		}
-
-		.docs-story-popout {
-			padding: 0.55rem 0.8rem;
-			font-size: 0.95rem;
-		}
-
 		.docs-story-embed iframe {
 			height: 76vh;
 			min-height: 36rem;
