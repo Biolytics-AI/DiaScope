@@ -90,8 +90,8 @@ scenes:
 ### `d2` — graph adapter
 
 - `D2Compiler` interface: `compile(source) → { svg, graphIndex }` with `graphIndex = { nodes: [{id, label, classes, parent}], edges: [{id, source, target, label}] }`.
-- **Primary impl:** `@terrastruct/d2` (WASM). Its compile output exposes the diagram object (shapes/connections), so the index comes from structured data, not SVG scraping.
-- **Fallback impl:** `CliCompiler` shelling out to the `d2` binary (kept for TALA layouts / legacy parity), index extracted from `d2` JSON output or source parsing.
+- **Primary impl:** `@terrastruct/d2` (WASM). Its compile output exposes the diagram object (shapes/connections) including layout geometry (`pos`/`width`/`height`), so both the index and camera bounds come from structured data, not SVG scraping. Covers the `dagre` and `elk` layout engines.
+- A `CliCompiler` fallback (shelling out to the `d2` binary, needed only for TALA layouts) is **deferred** to a later milestone; the `D2Compiler` interface keeps that slot open.
 - `SvgGraphBinding`: maps semantic ids → SVG elements/bounds (adapting legacy `tagging.ts`). This is the **only** layer that knows D2's SVG structure.
 - Exports the machine-readable `inspect()` inventory served by the agent CLI.
 
