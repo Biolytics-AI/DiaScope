@@ -1,56 +1,19 @@
 {
-  "name": "@biolytics.ai/diascope",
-  "version": "0.1.2",
-  "description": "Turn D2 diagrams into narrated interactive stories",
-  "homepage": "https://diascope.biolytics.ai",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Biolytics-AI/DiaScope.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Biolytics-AI/DiaScope/issues"
-  },
+  "name": "diascope-monorepo",
+  "private": true,
   "type": "module",
-  "main": "./dist/viewer/index.js",
-  "types": "./dist/viewer/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/viewer/index.js",
-      "types": "./dist/viewer/index.d.ts"
-    },
-    "./story": {
-      "import": "./dist/story/index.js",
-      "types": "./dist/story/index.d.ts"
-    }
-  },
-  "bin": {
-    "diascope": "dist/cli/index.js"
-  },
-  "files": [
-    "dist/",
-    "templates/"
-  ],
+  "workspaces": ["packages/*", "demo/*"],
   "scripts": {
-    "build": "tsc && node esbuild.mjs",
-    "build:tsc": "tsc",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "demo:record": "node scripts/record-demo.mjs",
-    "docs:prepare-assets": "mkdir -p docs-site/public/examples/vllm && cp examples/vLLM/deployment.d2 docs-site/public/examples/vllm/deployment.d2 && cp examples/vLLM/deployment.story.yaml docs-site/public/examples/vllm/deployment.story.yaml && cp examples/vLLM/README.md docs-site/public/examples/vllm/README.md && node dist/cli/index.js build examples/vLLM/deployment.d2 examples/vLLM/deployment.story.yaml -o docs-site/public/examples/vllm/deployment.html && cp docs-site/public/examples/vllm/deployment.html examples/vLLM/deployment.html && ([ -f docs/demo.gif ] && cp docs/demo.gif docs-site/public/demo.gif || true)",
+    "docs:prepare-assets": "mkdir -p docs-site/public/examples/vllm && cp examples/vLLM/deployment.d2 docs-site/public/examples/vllm/deployment.d2 && cp examples/vLLM/deployment.story.yaml docs-site/public/examples/vllm/deployment.story.yaml && cp examples/vLLM/README.md docs-site/public/examples/vllm/README.md && node packages/diascope/dist/cli/index.js build examples/vLLM/deployment.d2 examples/vLLM/deployment.story.yaml -o docs-site/public/examples/vllm/deployment.html && cp docs-site/public/examples/vllm/deployment.html examples/vLLM/deployment.html && ([ -f docs/demo.gif ] && cp docs/demo.gif docs-site/public/demo.gif || true)",
     "docs:dev": "npm --prefix docs-site run dev",
-    "docs:build": "npm run build && npm run docs:prepare-assets && npm --prefix docs-site run build",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "dependencies": {
-    "commander": "^12.0.0",
-    "js-yaml": "^4.1.0",
-    "svg-pan-zoom": "^3.6.1"
+    "docs:build": "npm run build && npm run docs:prepare-assets && npm --prefix docs-site run build"
   },
   "devDependencies": {
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20.0.0",
-    "esbuild": "^0.21.0",
-    "playwright": "^1.44.0",
+    "@types/node": "^22.0.0",
     "typescript": "^5.4.0",
-    "vitest": "^1.5.0"
+    "vitest": "^3.0.0"
   }
 }

@@ -26,7 +26,7 @@ jobs:
       - run: npm run build
 
       - name: Publish to npm
-        run: npm publish --provenance --access public
+        run: npm publish -w @biolytics.ai/diascope --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

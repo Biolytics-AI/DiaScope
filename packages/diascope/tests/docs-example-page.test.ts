@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const pagePath = new URL("../docs-site/src/content/docs/examples/vllm-deployment.mdx", import.meta.url);
+const pagePath = new URL("../../../docs-site/src/content/docs/examples/vllm-deployment.mdx", import.meta.url);
 
 describe("docs example page", () => {
   const source = readFileSync(pagePath, "utf8");
