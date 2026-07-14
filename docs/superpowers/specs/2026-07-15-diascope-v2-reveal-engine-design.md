@@ -130,6 +130,22 @@ Vite + `@revealjs/react` app using the existing vLLM example: horizontal slides 
 - `demo`: Playwright smoke (already a dev dep) — keypress through the deck, assert highlighted nodes per step.
 - Legacy package tests keep running unchanged in the workspace.
 
+## Verification & polish protocol (M1 acceptance)
+
+Static tests alone do not close the milestone. Acceptance requires all four phases:
+
+**Phase A — static tests.** Everything in the Testing section green across all workspaces.
+
+**Phase B — agentic authoring test.** Dispatch fresh subagents (no implementation context) that author *new* diagrams and walkthroughs from scratch using only the agent CLI (`validate`, `graph inspect --json`), the generated JSON Schema, and the docs — then build working decks from them. Success means an agent can go from "explain system X" to a valid, playing deck without human fixes. This directly tests the agent-authorability design goal. When the GUI ships in a later milestone, the same protocol extends to GUI-driven authoring.
+
+**Phase C — browser layout verification.** Drive Chrome against the demo deck and the agent-authored decks (Playwright and/or DevTools):
+
+- Screenshot every step of every scene, forward and backward, at desktop and narrow viewports.
+- Not screenshots alone: instrument the renderer with a debug hook (e.g. `window.__diascopeDebug.layout()`) that reports bounding boxes (`getBoundingClientRect`) for the canvas, narration pane, popovers, step pills, drawers, and highlighted nodes — logged to console and asserted programmatically.
+- Assert: no unintended overlap or touching between components (popover vs. its target node, narration pane vs. canvas, pill row overflow, drawer vs. tooltip); highlighted nodes fully inside the camera viewport after each transition.
+
+**Phase D — design-quality iteration.** Run the `/audit`, `/animate`, and `/polish` skills against the rendered decks (diagrams *and* narration). Fix findings, re-run Phase C, re-audit. Loop until Phase C passes with zero violations and the audit comes back clean — "works flawlessly and looks amazing" is the bar, not "tests pass."
+
 ## Error handling
 
 - Unknown node ids fail validation with did-you-mean suggestions.
