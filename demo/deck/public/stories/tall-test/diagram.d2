@@ -1,0 +1,29 @@
+direction: down
+
+title: "Tall vertical pipeline (side-by-side layout fixture)"
+
+A: "Client request" {
+  style.fill: "#dbeafe"
+  style.stroke: "#2563eb"
+}
+B: "Validation" {
+  style.fill: "#dcfce7"
+  style.stroke: "#16a34a"
+}
+C: "Business logic" {
+  style.fill: "#fef3c7"
+  style.stroke: "#d97706"
+}
+D: "Persistence" {
+  style.fill: "#ede9fe"
+  style.stroke: "#7c3aed"
+}
+E: "Response" {
+  style.fill: "#fee2e2"
+  style.stroke: "#dc2626"
+}
+
+A -> B: "validate"
+B -> C: "apply rules"
+C -> D: "write"
+D -> E: "serialize"

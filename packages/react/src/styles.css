@@ -314,16 +314,34 @@
 .ds-scene[data-diascope-layout="stacked"] .ds-pane {
   flex: 0 0 auto;
   width: 100%;
-  max-height: 34%;
-  /* Reflow the pane into a wide short band: pills across the top, then title + body. */
+  /* border-box so the pane's 16px padding stays INSIDE its 100% width — content-box would
+     push it 32px past the scene's right edge and truncate the body text (verified in-browser). */
+  box-sizing: border-box;
+  /* The band is content-sized but bounded to keep the canvas wide-and-short (~2.5–2.9:1, the
+     aspect that fills a wide diagram). A floor stops a terse one-line step from collapsing the
+     band and leaving the canvas tall/square; a cap stops a verbose step from eating the diagram
+     (overflow-y already scrolls past it). Percentage heights don't clamp reliably for this flex
+     item, so we use container-query height units — `.ds-scene` is `container-type: size`, so
+     `cqh` resolves against the scene's own height into a concrete length flexbox honours. */
+  min-height: 30cqh;   /* canvas <= ~70% */
+  max-height: 38cqh;   /* canvas >= ~62% */
+  padding: 16px 24px;
+  /* Reflow the pane into a wide short band: pills across the top, then title + body, centered
+     vertically so a short caption reads as an intentional band rather than top-aligned text. */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
   grid-template-areas: "pills pills" "title body";
-  column-gap: 20px;
-  row-gap: 6px;
-  align-content: start;
+  column-gap: 28px;
+  row-gap: 8px;
+  align-content: center;
+  /* Hairline separating the band from the diagram above, so the full-bleed band is deliberate. */
+  border-top: 1px solid var(--ds-border);
 }
-.ds-scene[data-diascope-layout="stacked"] .ds-pills { grid-area: pills; margin-bottom: 4px; }
-.ds-scene[data-diascope-layout="stacked"] .ds-title { grid-area: title; margin: 0; }
-.ds-scene[data-diascope-layout="stacked"] .ds-body  { grid-area: body; }
+.ds-scene[data-diascope-layout="stacked"] .ds-pills { grid-area: pills; margin: 0 0 2px; }
+.ds-scene[data-diascope-layout="stacked"] .ds-title {
+  grid-area: title; margin: 0; font-size: 22px; line-height: 1.22;
+}
+.ds-scene[data-diascope-layout="stacked"] .ds-body  {
+  grid-area: body; font-size: 18px; line-height: 1.5;
+}
 .ds-scene[data-diascope-layout="stacked"] .ds-nav   { display: none; }

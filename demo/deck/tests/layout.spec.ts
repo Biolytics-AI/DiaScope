@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve as resolvePath } from "node:path";
 import yaml from "js-yaml";
-import { overlaps, contains, distance, type Rect } from "./geometry.js";
+import { overlaps, contains, distance, bottom, type Rect } from "./geometry.js";
 
 interface Entry { part: string; id: string | null; target: string | null; rect: Rect }
 
@@ -71,6 +71,19 @@ function slidePosition(sceneIndex: number): { h: number; v: number } {
 const layout = (page: Page): Promise<Entry[]> =>
   page.evaluate(() => (window as any).__diascopeDebug?.layout() ?? []);
 
+// The orientation the renderer chose for the on-screen scene (data-diascope-layout on the
+// .ds-scene root; see packages/react/src/TwoPaneScene.tsx). Read off the *visible* scene the
+// same way debug.layout() filters — reveal.js keeps every scene mounted, so pick the one that
+// actually passes checkVisibility. Returns null on a non-scene slide (e.g. the title).
+const sceneOrientation = (page: Page): Promise<string | null> =>
+  page.evaluate(() => {
+    const scenes = [...document.querySelectorAll('[data-diascope-part="scene"]')] as HTMLElement[];
+    const vis = scenes.find(s =>
+      (s as any).checkVisibility?.({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true })
+    );
+    return vis?.getAttribute("data-diascope-layout") ?? null;
+  });
+
 // reveal.js keeps every slide in the DOM; non-current scenes are display:none and thus
 // report all-zero rects from getBoundingClientRect. Keep only the parts that actually have
 // on-screen geometry so a single visible scene's parts are what we assert against.
@@ -120,6 +133,15 @@ async function assertInvariants(page: Page, label: string) {
   const msg = (s: string) => `${label}: ${s}`;
 
   expect.soft(overlaps(canvas.rect, pane.rect), msg("canvas overlaps narration pane")).toBe(false);
+
+  // In the stacked (wide-diagram) layout the canvas is stacked ABOVE the narration band, so
+  // assert the vertical *ordering* — canvas.bottom sits at or above pane.top — not merely the
+  // non-overlap the row layout already gives. A small tolerance absorbs the flex gap rounding.
+  // (Design invariant "canvas above pane": 2026-07-15-adaptive-layout-design.md.)
+  const orientation = await sceneOrientation(page);
+  if (orientation === "stacked") {
+    expect.soft(bottom(canvas.rect) <= pane.rect.y + 4, msg("stacked: canvas is not above narration band")).toBe(true);
+  }
 
   for (const pill of of("pill-row"))
     expect.soft(contains(pane.rect, pill.rect, 4), msg("pill-row escapes pane")).toBe(true);
