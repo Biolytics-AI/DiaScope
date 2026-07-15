@@ -14,6 +14,15 @@ describe("fitViewBox", () => {
     expect(vb.x).toBeCloseTo(-50);
     expect(vb.height).toBeCloseTo(100);
   });
+  it("never degenerates to a zero-size or NaN viewBox for zero-area bounds", () => {
+    const vb = fitViewBox({ x: 5, y: 5, width: 0, height: 0 }, 2, 0.12);
+    expect(vb.width).toBeGreaterThan(0);
+    expect(vb.height).toBeGreaterThan(0);
+    expect(Number.isNaN(vb.x)).toBe(false);
+    expect(Number.isNaN(vb.y)).toBe(false);
+    expect(Number.isNaN(vb.width)).toBe(false);
+    expect(Number.isNaN(vb.height)).toBe(false);
+  });
 });
 
 describe("interpolateRect/easeInOut", () => {

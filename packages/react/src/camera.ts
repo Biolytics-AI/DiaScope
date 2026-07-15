@@ -10,23 +10,30 @@ export type ViewBox = Rect;
  * Pads `bounds` by `padFraction` of its longer side, then letterboxes the result to
  * `containerAspect` (width/height) by symmetrically expanding whichever dimension is too
  * narrow. Never crops — the returned viewBox always fully contains the padded bounds.
+ *
+ * Guards against zero-area bounds (e.g. a single-point cameraFit, or a node with no
+ * geometry yet): width/height are floored to MIN_EXTENT before padding so the result never
+ * degenerates to a zero-size or NaN viewBox, while keeping the original bounds.x/y centered.
  */
 export function fitViewBox(bounds: Rect, containerAspect: number, padFraction = 0.12): ViewBox {
-  const pad = Math.max(bounds.width, bounds.height) * padFraction;
-  let x = bounds.x - pad;
-  let y = bounds.y - pad;
-  let width = bounds.width + 2 * pad;
-  let height = bounds.height + 2 * pad;
+  const MIN_EXTENT = 1;
+  const w = Math.max(bounds.width, MIN_EXTENT);
+  const h = Math.max(bounds.height, MIN_EXTENT);
+  const pad = Math.max(w, h) * padFraction;
+  let x = bounds.x - (w - bounds.width) / 2 - pad;
+  let y = bounds.y - (h - bounds.height) / 2 - pad;
+  let width = w + 2 * pad;
+  let height = h + 2 * pad;
 
   const aspect = width / height;
   if (aspect < containerAspect) {
-    const w = height * containerAspect;
-    x -= (w - width) / 2;
-    width = w;
+    const newWidth = height * containerAspect;
+    x -= (newWidth - width) / 2;
+    width = newWidth;
   } else {
-    const h = width / containerAspect;
-    y -= (h - height) / 2;
-    height = h;
+    const newHeight = width / containerAspect;
+    y -= (newHeight - height) / 2;
+    height = newHeight;
   }
   return { x, y, width, height };
 }
