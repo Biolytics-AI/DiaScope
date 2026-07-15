@@ -12,5 +12,8 @@
   "dependencies": {
     "@terrastruct/d2": "^0.1.33",
     "@diascope/core": "*"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
   }
 }
