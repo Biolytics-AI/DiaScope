@@ -1,0 +1,19 @@
+.ds-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.ds-dim {
+  opacity: 0.22;
+}
+.ds-dim,
+.ds-highlight,
+.ds-hidden,
+.ds-trace {
+  transition: opacity 400ms ease;
+}
+.ds-highlight {
+  filter: drop-shadow(0 0 6px rgba(6, 225, 236, 0.65));
+}
+.ds-trace path {
+  stroke-width: 3.5 !important;
+}
