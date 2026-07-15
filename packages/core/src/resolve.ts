@@ -1,5 +1,5 @@
 import type { GraphEdge, GraphIndex } from "./graph.js";
-import type { NarrativeDocument, Popover } from "./schema.js";
+import type { NarrativeDocument, Popover, StepText } from "./schema.js";
 import { resolveNodes, resolveTrace } from "./selectors.js";
 
 export interface SceneState {
@@ -9,7 +9,7 @@ export interface SceneState {
   traced: GraphEdge[];
   popovers: Popover[];
   cameraFit: string[];
-  text?: { title?: string; body?: string };
+  text?: StepText;
 }
 
 export function resolveStep(doc: NarrativeDocument, sceneId: string, stepIndex: number, index: GraphIndex): SceneState {
@@ -27,12 +27,19 @@ export function resolveStep(doc: NarrativeDocument, sceneId: string, stepIndex: 
   const cur = scene.steps[stepIndex];
   const focus = resolveNodes(cur.focus, index).filter(id => visible.has(id));
   const highlighted = (cur.highlight ? resolveNodes(cur.highlight, index) : focus).filter(id => visible.has(id));
-  const dimmedSet = new Set(resolveNodes(cur.dim, index).filter(id => visible.has(id)));
+  const focusSet = new Set(focus);
+  const highlightSet = new Set(highlighted);
+  // Explicit dim never contradicts emphasis: focused/highlighted ids are excluded.
+  const dimmedSet = new Set(
+    resolveNodes(cur.dim, index).filter(id => visible.has(id) && !focusSet.has(id) && !highlightSet.has(id))
+  );
   if (focus.length) {
-    for (const id of visible) if (!focus.includes(id) && !highlighted.includes(id)) dimmedSet.add(id);
+    for (const id of visible) if (!focusSet.has(id) && !highlightSet.has(id)) dimmedSet.add(id);
   }
-  const traced = resolveTrace(cur.trace, index);
-  const popovers: Popover[] = cur.popover ? (Array.isArray(cur.popover) ? cur.popover : [cur.popover]) : [];
+  const traced = resolveTrace(cur.trace, index).map(e => ({ ...e }));
+  const popovers: Popover[] = (cur.popover ? (Array.isArray(cur.popover) ? cur.popover : [cur.popover]) : [])
+    .filter(p => visible.has(p.target))
+    .map(p => ({ ...p }));
 
   let cameraFit: string[];
   const selection = [...new Set([...highlighted, ...focus])];
@@ -43,6 +50,6 @@ export function resolveStep(doc: NarrativeDocument, sceneId: string, stepIndex: 
   return {
     visible: [...visible].sort(),
     highlighted, dimmed: [...dimmedSet].sort(), traced, popovers, cameraFit,
-    text: cur.text,
+    text: cur.text ? { ...cur.text } : undefined,
   };
 }

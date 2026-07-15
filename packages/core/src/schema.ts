@@ -57,3 +57,4 @@ export type Scene = z.infer<typeof SceneSchema>;
 export type NarrativeDocument = z.infer<typeof NarrativeDocumentSchema>;
 export type NarrativeDocumentInput = z.input<typeof NarrativeDocumentSchema>;
 export type Popover = z.infer<typeof PopoverSchema>;
+export type StepText = z.infer<typeof StepTextSchema>;
