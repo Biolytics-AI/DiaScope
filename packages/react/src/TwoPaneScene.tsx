@@ -31,13 +31,20 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null);
 
+  // `scene` stays possibly-undefined until AFTER all hooks have run: an unknown sceneId
+  // renders error UI below instead of throwing mid-render, and the hook count stays
+  // consistent whether or not the scene exists.
   const scene = doc.scenes.find(s => s.id === sceneId);
-  if (!scene) throw new Error(`Unknown scene "${sceneId}"`);
-  const state = useMemo(() => resolveStep(doc, sceneId, stepIndex, index), [doc, sceneId, stepIndex, index]);
+  const state = useMemo(
+    () => (scene ? resolveStep(doc, sceneId, stepIndex, index) : null),
+    [doc, scene, sceneId, stepIndex, index]
+  );
 
+  // Re-runs when `scene` presence flips (e.g. a doc update fixes a bad sceneId) so the
+  // freshly-mounted valid root still registers; installLayoutDebug dedupes via a Set.
   useEffect(() => {
     if (rootRef.current) installLayoutDebug(rootRef.current);
-  }, []);
+  }, [scene]);
 
   // Track the canvas wrapper's pixel size so PopoverLayer can convert diagram-space bounds
   // to screen coordinates. Under jsdom (unit tests) getBoundingClientRect always returns an
@@ -60,7 +67,7 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
   }, []);
 
   const viewBox: ViewBox | null = useMemo(() => {
-    if (!binding || !containerSize) return null;
+    if (!binding || !containerSize || !state) return null;
     const bounds = binding.bounds(state.cameraFit);
     if (!bounds) return null;
     // Fall back to a 16:9 aspect (matches GraphCanvas's own fallback) when the container
@@ -71,7 +78,7 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
 
   const onNodeClick = useCallback(
     (id: string) => {
-      if (scene.annotations?.nodes?.[id]) setDrawer(id);
+      if (scene?.annotations?.nodes?.[id]) setDrawer(id);
     },
     [scene]
   );
@@ -83,14 +90,23 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
         return;
       }
       const edge = index.edges.find(e => e.id === id);
-      const tips = scene.annotations?.edges ?? {};
+      const tips = scene?.annotations?.edges ?? {};
       const text = (edge?.label && tips[edge.label]) || (edge && tips[`${edge.source}->${edge.target}`]) || null;
       setTooltip(text && edge ? { text, x: ev.clientX, y: ev.clientY } : null);
     },
     [scene, index]
   );
 
-  const hasEdgeTips = !!scene.annotations?.edges && Object.keys(scene.annotations.edges).length > 0;
+  const edgeTips = scene?.annotations?.edges;
+  const hasEdgeTips = !!edgeTips && Object.keys(edgeTips).length > 0;
+
+  if (!scene || !state) {
+    return (
+      <div ref={rootRef} data-diascope-part="scene-error" className="ds-scene-error">
+        Unknown scene "{sceneId}"
+      </div>
+    );
+  }
 
   return (
     <div ref={rootRef} data-diascope-part="scene" className="ds-scene">

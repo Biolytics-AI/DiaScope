@@ -1,9 +1,30 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GraphIndex, SceneState } from "@diascope/core";
 import { SvgGraphBinding } from "@diascope/d2";
 import { applyStateToSvg } from "./state-classes.js";
 import { animateViewBox, fitViewBox } from "./camera.js";
 import { runTraceAnimations, clearTraceStyles } from "./trace.js";
+
+/**
+ * Fits `svgEl`'s viewBox to the bounds of `state.cameraFit`, aspect-matched to `host`'s
+ * current pixel size (16:9 fallback when unmeasured, e.g. under jsdom). Returns the
+ * animation's cancel function, or null when the fit ids have no geometry.
+ *
+ * Exported so the camera fit used by GraphCanvas's state effect and its resize re-fit is
+ * one shared, directly-testable code path.
+ */
+export function fitCameraToState(
+  binding: SvgGraphBinding,
+  svgEl: SVGSVGElement,
+  host: HTMLElement,
+  state: SceneState,
+  ms?: number
+): (() => void) | null {
+  const bounds = binding.bounds(state.cameraFit);
+  if (!bounds) return null;
+  const aspect = host.clientWidth && host.clientHeight ? host.clientWidth / host.clientHeight : 16 / 9;
+  return animateViewBox(svgEl, fitViewBox(bounds, aspect), ms);
+}
 
 export interface GraphCanvasProps {
   svg: string;
@@ -30,6 +51,18 @@ export function GraphCanvas({ svg, index, state, onNodeClick, onEdgeHover, onBin
   const svgElRef = useRef<SVGSVGElement | null>(null);
   const prevStateRef = useRef<SceneState | null>(null);
   const lastEdgeId = useRef<string | null>(null);
+  const cancelFitRef = useRef<(() => void) | null>(null);
+
+  // Single entry point for camera fits: cancels any in-flight animation before starting the
+  // next one, so the state effect and the resize re-fit below never fight over the viewBox.
+  const runCameraFit = useCallback(
+    (state: SceneState, ms?: number) => {
+      if (!binding || !svgElRef.current || !hostRef.current) return;
+      cancelFitRef.current?.();
+      cancelFitRef.current = fitCameraToState(binding, svgElRef.current, hostRef.current, state, ms);
+    },
+    [binding]
+  );
 
   // Mount/replace the inline SVG whenever the compiled diagram itself changes.
   useEffect(() => {
@@ -58,14 +91,35 @@ export function GraphCanvas({ svg, index, state, onNodeClick, onEdgeHover, onBin
     runTraceAnimations(binding, state);
     prevStateRef.current = state;
 
-    const bounds = binding.bounds(state.cameraFit);
-    if (!bounds) return;
-    const host = hostRef.current!;
-    const aspect = host.clientWidth && host.clientHeight ? host.clientWidth / host.clientHeight : 16 / 9;
+    runCameraFit(state);
     // Cleanup cancels any in-flight camera animation before the next state's animation
     // starts, so rapid step changes don't fight over the viewBox attribute.
-    return animateViewBox(svgElRef.current, fitViewBox(bounds, aspect));
-  }, [binding, index, state]);
+    return () => {
+      cancelFitRef.current?.();
+      cancelFitRef.current = null;
+    };
+  }, [binding, index, state, runCameraFit]);
+
+  // Re-fit the camera when the host's pixel size changes (e.g. reveal.js rescaling its
+  // slides on every window resize): without this the viewBox computed for the old aspect
+  // goes stale until the next step, while popover positioning already uses the new
+  // geometry — visible misalignment. jsdom has no ResizeObserver, hence the guard.
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!binding || !host || typeof ResizeObserver === "undefined") return;
+    let first = true;
+    const ro = new ResizeObserver(() => {
+      // ResizeObserver always fires once on observe(); the state effect has already
+      // fitted for the current size, so only react to actual subsequent resizes.
+      if (first) {
+        first = false;
+        return;
+      }
+      if (prevStateRef.current) runCameraFit(prevStateRef.current, 150);
+    });
+    ro.observe(host);
+    return () => ro.disconnect();
+  }, [binding, runCameraFit]);
 
   // Hit-test clicks/hovers against an inverted element -> id map (built once per binding)
   // instead of walking the graph index per event.

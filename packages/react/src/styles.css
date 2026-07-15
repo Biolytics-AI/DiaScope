@@ -46,6 +46,8 @@
   font-size: 13px;
   line-height: 1.45;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  max-height: 40vh;
+  overflow-y: auto;
 }
 .ds-pane {
   flex: 0 0 320px;
@@ -101,6 +103,11 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+}
+.ds-scene-error {
+  padding: 16px;
+  color: #ff8f8f;
+  font-size: 14px;
 }
 @media (max-width: 900px) {
   .ds-scene {

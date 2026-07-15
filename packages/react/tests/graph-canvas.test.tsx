@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterEach, vi } from "vitest";
 import { render, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import type { GraphIndex, SceneState } from "@diascope/core";
 import { WasmD2Compiler, SvgGraphBinding } from "@diascope/d2";
-import { GraphCanvas } from "../src/GraphCanvas.js";
+import { GraphCanvas, fitCameraToState } from "../src/GraphCanvas.js";
 
 const SRC = `
 sys: System { api: API { class: svc } }
@@ -131,6 +131,26 @@ describe("GraphCanvas", () => {
     await waitFor(() => {
       expect(svgEl.getAttribute("viewBox")).toBeTruthy();
     });
+  });
+
+  it("exposes fitCameraToState (shared by the state effect and resize re-fit), which fits the viewBox", async () => {
+    const host = document.createElement("div");
+    const svgDoc = new DOMParser().parseFromString(svg, "image/svg+xml");
+    const svgEl = svgDoc.documentElement as unknown as SVGSVGElement;
+    svgEl.removeAttribute("viewBox");
+    const binding = new SvgGraphBinding(svgEl, index);
+
+    expect(typeof fitCameraToState).toBe("function");
+    const cancel = fitCameraToState(binding, svgEl, host, stateA);
+    expect(typeof cancel).toBe("function");
+    await waitFor(() => {
+      expect(svgEl.getAttribute("viewBox")).toBeTruthy();
+    });
+    cancel?.();
+
+    // No geometry for the fit ids -> no animation to run, and it signals that with null.
+    const none = fitCameraToState(binding, svgEl, host, { ...stateA, cameraFit: [] });
+    expect(none).toBeNull();
   });
 
   it("renders a traced edge without throwing even though jsdom lacks getTotalLength/animate", () => {

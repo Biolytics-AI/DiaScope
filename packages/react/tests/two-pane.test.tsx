@@ -173,6 +173,20 @@ describe("TwoPaneScene / useNarrative / debug layout", () => {
     expect(queryByText("API detail")).toBeNull();
   });
 
+  it("renders an error UI instead of throwing for an unknown sceneId", () => {
+    const onGoto = vi.fn();
+    const { container } = render(
+      <TwoPaneScene svg={svg} index={index} doc={doc} sceneId="nope" stepIndex={0} onGoto={onGoto} />
+    );
+
+    const err = container.querySelector('[data-diascope-part="scene-error"]');
+    expect(err).not.toBeNull();
+    expect(err!.textContent).toContain('Unknown scene "nope"');
+    // None of the normal scene chrome renders in the error state.
+    expect(container.querySelector('[data-diascope-part="pane"]')).toBeNull();
+    expect(container.querySelector('[data-diascope-part="canvas"]')).toBeNull();
+  });
+
   it("window.__diascopeDebug.layout() reports scene/canvas/pane/pill-row and a popover entry at step 1", () => {
     const onGoto = vi.fn();
     render(<TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={1} onGoto={onGoto} />);
