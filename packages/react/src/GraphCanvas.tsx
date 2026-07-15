@@ -36,6 +36,12 @@ export interface GraphCanvasProps {
   onNodeClick?: (id: string) => void;
   onEdgeHover?: (id: string | null, ev: MouseEvent) => void;
   onBindingReady?: (binding: SvgGraphBinding, svgEl: SVGSVGElement) => void;
+  /**
+   * Node ids that expose extra content (a drawer) on activation. GraphCanvas makes these
+   * elements keyboard-focusable (tabindex + role=button + aria-label) and fires onNodeClick
+   * on Enter/Space, so the mouse-only node→drawer path also works from the keyboard/AT.
+   */
+  interactiveNodeIds?: string[];
 }
 
 /**
@@ -48,7 +54,15 @@ export interface GraphCanvasProps {
  * keeps the binding, the element identity used for hit-testing, and any in-flight CSS
  * transitions stable across steps.
  */
-export function GraphCanvas({ svg, index, state, onNodeClick, onEdgeHover, onBindingReady }: GraphCanvasProps) {
+export function GraphCanvas({
+  svg,
+  index,
+  state,
+  onNodeClick,
+  onEdgeHover,
+  onBindingReady,
+  interactiveNodeIds,
+}: GraphCanvasProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [binding, setBinding] = useState<SvgGraphBinding | null>(null);
   const svgElRef = useRef<SVGSVGElement | null>(null);
@@ -169,6 +183,47 @@ export function GraphCanvas({ svg, index, state, onNodeClick, onEdgeHover, onBin
       host.removeEventListener("mousemove", move);
     };
   }, [binding, index, onNodeClick, onEdgeHover]);
+
+  // Keyboard parity for annotated nodes: make the elements the drawer opens from focusable
+  // and activatable via Enter/Space. applyStateToSvg only manages its own class list +
+  // data-diascope-* attributes, so these tabindex/role/aria-label attributes survive every
+  // step change; they're re-applied here whenever the binding (i.e. the SVG DOM) is replaced.
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!binding || !host || !interactiveNodeIds || interactiveNodeIds.length === 0) return;
+
+    const idToEl = new Map<string, Element>();
+    for (const id of interactiveNodeIds) {
+      const el = binding.nodeElement(id);
+      if (!el) continue;
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("role", "button");
+      el.setAttribute("aria-label", `Details for ${id}`);
+      (el as unknown as ElementCSSInlineStyle).style.cursor = "pointer";
+      idToEl.set(id, el);
+    }
+
+    const keydown = (e: Event) => {
+      const ke = e as KeyboardEvent;
+      if (ke.key !== "Enter" && ke.key !== " " && ke.key !== "Spacebar") return;
+      for (const [id, el] of idToEl) {
+        if (el === ke.target || el.contains(ke.target as Node)) {
+          ke.preventDefault();
+          onNodeClick?.(id);
+          return;
+        }
+      }
+    };
+    host.addEventListener("keydown", keydown);
+    return () => {
+      host.removeEventListener("keydown", keydown);
+      for (const el of idToEl.values()) {
+        el.removeAttribute("tabindex");
+        el.removeAttribute("role");
+        el.removeAttribute("aria-label");
+      }
+    };
+  }, [binding, interactiveNodeIds, onNodeClick]);
 
   return (
     <div

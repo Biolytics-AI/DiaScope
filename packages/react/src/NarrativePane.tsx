@@ -26,6 +26,7 @@ export function NarrativePane({ scene, stepIndex, onGoto }: NarrativePaneProps) 
             type="button"
             className={`ds-pill${i === stepIndex ? " ds-pill-active" : ""}`}
             aria-current={i === stepIndex ? "step" : undefined}
+            title={s.text?.title ?? scene.text?.title ?? undefined}
             onClick={() => onGoto(i)}
           >
             {String(i + 1).padStart(2, "0")}

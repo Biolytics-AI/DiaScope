@@ -15,7 +15,7 @@ export type ViewBox = Rect;
  * geometry yet): width/height are floored to MIN_EXTENT before padding so the result never
  * degenerates to a zero-size or NaN viewBox, while keeping the original bounds.x/y centered.
  */
-export function fitViewBox(bounds: Rect, containerAspect: number, padFraction = 0.12): ViewBox {
+export function fitViewBox(bounds: Rect, containerAspect: number, padFraction = 0.08): ViewBox {
   const MIN_EXTENT = 1;
   const w = Math.max(bounds.width, MIN_EXTENT);
   const h = Math.max(bounds.height, MIN_EXTENT);

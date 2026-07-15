@@ -34,8 +34,12 @@ export function App() {
       plugins={[DiaScopeRevealPlugin]}
       onReady={deck => { (window as unknown as { deck: unknown }).deck = deck; }}>
       <Slide>
-        <h2>{first.text?.title ?? "DiaScope v2"}</h2>
-        <p>Graph-native narrative over reveal.js — arrow keys to navigate.</p>
+        <div className="deck-title">
+          <span className="deck-title-rule" aria-hidden="true" />
+          <h2>{first.text?.title ?? "DiaScope v2"}</h2>
+          <p className="deck-title-sub">Graph-native narrative over reveal.js</p>
+          <p className="deck-title-hint">→ to begin</p>
+        </div>
       </Slide>
       <Slide><NarrativeScene d2Source={d2} doc={doc} sceneId={first.id} /></Slide>
       {rest.length > 0 && (

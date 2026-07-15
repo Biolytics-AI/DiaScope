@@ -11,10 +11,10 @@ scenes:
         "authenticated request carrying clinical context": "This edge marks the handoff into externally hosted AI processing."
     steps:
       - id: overview
-        camera: { fit: all }
+        camera: { fit: [HealthcareProvider, Biolytics] }
         text:
           title: "The full deployment"
-          body: "Every boundary a clinical request crosses on its way to external GPU processing. Press <strong>→</strong> to walk through it."
+          body: "A clinical request leaves the provider environment and enters Biolytics-managed external processing. The GPU infrastructure and the audit trail continue to the right — the walkthrough covers them. Press <strong>→</strong> to begin."
       - id: boundary
         focus: [HealthcareProvider.Controls.ClientAuth, Biolytics.Runtime.Ingress, Biolytics.Runtime.TLS]
         trace: HealthcareProvider.Controls.ClientAuth->Biolytics.Runtime.Ingress->Biolytics.Runtime.TLS

@@ -42,6 +42,15 @@ describe("TwoPaneScene / useNarrative / debug layout", () => {
   let svg: string;
   let index: GraphIndex;
 
+  // The drawer's focus management (move focus to the close button on open, restore on close)
+  // makes react-dom's focus plugin schedule deferred work. Left pending, that macrotask runs
+  // during the later useNarrative test's D2 compile, which temporarily deletes globalThis.window
+  // (see that test), tripping a ReferenceError inside react-dom. Draining a macrotask tick after
+  // each teardown lets those focus side effects settle here, while window is still present.
+  afterEach(async () => {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
+
   beforeAll(async () => {
     // See packages/d2/tests/binding.test.ts for why `window` must be hidden during compile
     // under jsdom (the @terrastruct/d2 worker bootstrap misdetects browser vs. node).
@@ -167,6 +176,8 @@ describe("TwoPaneScene / useNarrative / debug layout", () => {
     const drawer = container.querySelector('[data-diascope-part="drawer"]');
     expect(drawer).not.toBeNull();
     expect(drawer!.textContent).toContain("API detail");
+    // Opening the dialog moves focus to its close button (M-15 focus management).
+    expect(document.activeElement).toBe(getByLabelText("Close details"));
 
     fireEvent.click(getByLabelText("Close details"));
     expect(container.querySelector('[data-diascope-part="drawer"]')).toBeNull();

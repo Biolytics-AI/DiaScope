@@ -137,8 +137,11 @@ async function assertInvariants(page: Page, label: string) {
   for (const node of of("node-highlight"))
     expect.soft(contains(canvas.rect, node.rect, 6), msg(`highlighted node ${node.id} outside camera viewport`)).toBe(true);
 
-  for (const drawer of of("drawer"))
+  for (const drawer of of("drawer")) {
     expect.soft(contains(scene.rect, drawer.rect, 4), msg("drawer escapes scene")).toBe(true);
+    // The drawer slides over the canvas only; it must never cover the narration pane.
+    expect.soft(overlaps(drawer.rect, pane.rect), msg("drawer overlaps narration pane")).toBe(false);
+  }
 }
 
 async function clickNode(page: Page, id: string) {
