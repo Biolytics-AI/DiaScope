@@ -4,7 +4,7 @@
   "type": "module",
   "workspaces": ["packages/*", "demo/*"],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build -w @diascope/core && npm run build -w @diascope/d2 && npm run build -w @diascope/react && npm run build -w @diascope/reveal && npm run build -w @diascope/cli && npm run build -w @biolytics.ai/diascope",
     "test": "npm run test --workspaces --if-present",
     "demo:record": "node scripts/record-demo.mjs",
     "docs:prepare-assets": "mkdir -p docs-site/public/examples/vllm && cp examples/vLLM/deployment.d2 docs-site/public/examples/vllm/deployment.d2 && cp examples/vLLM/deployment.story.yaml docs-site/public/examples/vllm/deployment.story.yaml && cp examples/vLLM/README.md docs-site/public/examples/vllm/README.md && node packages/diascope/dist/cli/index.js build examples/vLLM/deployment.d2 examples/vLLM/deployment.story.yaml -o docs-site/public/examples/vllm/deployment.html && cp docs-site/public/examples/vllm/deployment.html examples/vLLM/deployment.html && ([ -f docs/demo.gif ] && cp docs/demo.gif docs-site/public/demo.gif || true)",
