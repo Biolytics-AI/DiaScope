@@ -1,7 +1,26 @@
 import type { GraphIndex } from "./graph.js";
 import type { NarrativeDocument, NodeSelector, Popover, Step } from "./schema.js";
 import { resolveNodes, resolveTrace, UnknownReferenceError } from "./selectors.js";
+import { foldVisibility } from "./resolve.js";
 import { DEFERRED_VERBS } from "./capabilities.js";
+
+// Tolerant show/hide resolver for the visibility fold: iterates array elements
+// individually and skips unknown references instead of throwing, so the fold
+// keeps the same partial-resolution semantics as per-element validation. The
+// unknown refs themselves are reported as errors by resolveSelectorVerb.
+function tolerantResolve(sel: NodeSelector | NodeSelector[] | undefined, index: GraphIndex): string[] {
+  if (sel === undefined) return [];
+  const parts = Array.isArray(sel) ? sel : [sel];
+  const out: string[] = [];
+  for (const s of parts) {
+    try {
+      out.push(...resolveNodes(s, index));
+    } catch (e) {
+      if (!(e instanceof UnknownReferenceError)) throw e;
+    }
+  }
+  return out;
+}
 
 export interface Issue {
   path: string;
@@ -47,26 +66,34 @@ export function validateDocument(doc: NarrativeDocument, index: GraphIndex): Val
     }
   }
 
+  // Warns "empty-selector" for a class/not selector that resolved to zero nodes. String
+  // selectors never warn here: an unknown string id already errored (unknown-reference) and a
+  // known one always resolves to exactly one node.
+  function warnIfEmpty(sel: NodeSelector, resolved: string[], path: string) {
+    if (resolved.length === 0 && typeof sel !== "string") {
+      warnings.push({ path, reason: "empty-selector", message: `Selector at ${path} matches no nodes` });
+    }
+  }
+
   // Resolves a show/hide/focus/highlight/dim (or camera.fit array) value. Arrays are resolved
-  // element-by-element so every bad element is reported; a non-array class/not selector that
-  // resolves to zero nodes is flagged as an "empty-selector" warning (arrays are not, per-element,
-  // since an array of individually-valid selectors legitimately unioning to nothing isn't a typo
-  // the way a single dead selector usually is).
+  // element-by-element so every bad element is reported at its exact index (`path[i]`), and each
+  // zero-match class/not element gets its own "empty-selector" warning.
   function resolveSelectorVerb(value: NodeSelector | NodeSelector[] | undefined, path: string): string[] {
     if (value === undefined) return [];
     if (Array.isArray(value)) {
       const out: string[] = [];
       value.forEach((el, i) => {
-        const r = resolveOne(el, `${path}[${i}]`);
-        if (r) out.push(...r);
+        const elPath = `${path}[${i}]`;
+        const r = resolveOne(el, elPath);
+        if (r === undefined) return;
+        warnIfEmpty(el, r, elPath);
+        out.push(...r);
       });
       return out;
     }
     const r = resolveOne(value, path);
     if (r === undefined) return [];
-    if (r.length === 0 && typeof value !== "string") {
-      warnings.push({ path, reason: "empty-selector", message: `Selector at ${path} matches no nodes` });
-    }
+    warnIfEmpty(value, r, path);
     return r;
   }
 
@@ -99,9 +126,12 @@ export function validateDocument(doc: NarrativeDocument, index: GraphIndex): Val
 
   function validatePopover(popover: Popover | Popover[] | undefined, path: string, visible: ReadonlySet<string>) {
     if (popover === undefined) return;
-    const items = Array.isArray(popover) ? popover : [popover];
+    const isArray = Array.isArray(popover);
+    const items = isArray ? popover : [popover];
     items.forEach((p, i) => {
-      const targetPath = `${path}[${i}].target`;
+      // Paths mirror the authored shape: `popover.target` for the single-object form,
+      // `popover[i].target` only when the author actually wrote an array.
+      const targetPath = isArray ? `${path}[${i}].target` : `${path}.target`;
       const r = resolveOne(p.target, targetPath);
       if (r !== undefined && !visible.has(p.target)) {
         warnings.push({
@@ -117,13 +147,16 @@ export function validateDocument(doc: NarrativeDocument, index: GraphIndex): Val
     const scene = doc.scenes[si];
     const scenePath = `scenes[${si}]`;
 
-    const visible = new Set<string>(scene.steps[0]?.show ? [] : index.nodes.map(n => n.id));
     for (let ti = 0; ti < scene.steps.length; ti++) {
       const step = scene.steps[ti];
       const stepPath = `${scenePath}.steps[${ti}]`;
 
-      for (const id of resolveSelectorVerb(step.show, `${stepPath}.show`)) visible.add(id);
-      for (const id of resolveSelectorVerb(step.hide, `${stepPath}.hide`)) visible.delete(id);
+      // Reference/empty checks for show/hide happen here (once per step, exact paths);
+      // the visibility itself comes from the same fold resolveStep uses, with a tolerant
+      // resolver so already-reported unknown refs don't abort the fold.
+      resolveSelectorVerb(step.show, `${stepPath}.show`);
+      resolveSelectorVerb(step.hide, `${stepPath}.hide`);
+      const visible = foldVisibility(scene.steps, ti, index, tolerantResolve);
 
       const focusIds = resolveSelectorVerb(step.focus, `${stepPath}.focus`);
       if (focusIds.length > 0 && !focusIds.some(id => visible.has(id))) {

@@ -1,5 +1,5 @@
 import type { GraphEdge, GraphIndex } from "./graph.js";
-import type { NarrativeDocument, Popover, StepText } from "./schema.js";
+import type { NarrativeDocument, NodeSelector, Popover, Step, StepText } from "./schema.js";
 import { resolveNodes, resolveTrace } from "./selectors.js";
 
 export interface SceneState {
@@ -12,17 +12,37 @@ export interface SceneState {
   text?: StepText;
 }
 
+/**
+ * Folds step visibility from step 0 through `upToIndex` (inclusive): visibility
+ * seeds as ALL nodes unless steps[0].show is present (then it seeds empty);
+ * each step's show adds nodes and hide removes them, in order.
+ *
+ * `resolver` resolves one show/hide value to node ids. resolveStep passes
+ * resolveNodes (fail-fast on unknown refs); validateDocument passes a tolerant
+ * resolver that skips unknown refs, since validation reports those errors
+ * separately and must keep collecting.
+ */
+export function foldVisibility(
+  steps: Step[],
+  upToIndex: number,
+  index: GraphIndex,
+  resolver: (sel: NodeSelector | NodeSelector[] | undefined, index: GraphIndex) => string[]
+): Set<string> {
+  const visible = new Set<string>(steps[0]?.show ? [] : index.nodes.map(n => n.id));
+  for (const step of steps.slice(0, upToIndex + 1)) {
+    for (const id of resolver(step.show, index)) visible.add(id);
+    for (const id of resolver(step.hide, index)) visible.delete(id);
+  }
+  return visible;
+}
+
 export function resolveStep(doc: NarrativeDocument, sceneId: string, stepIndex: number, index: GraphIndex): SceneState {
   const scene = doc.scenes.find(s => s.id === sceneId);
   if (!scene) throw new Error(`Unknown scene "${sceneId}"`);
   if (stepIndex < 0 || stepIndex >= scene.steps.length)
     throw new Error(`Step ${stepIndex} out of range for scene "${sceneId}" (${scene.steps.length} steps)`);
 
-  const visible = new Set<string>(scene.steps[0].show ? [] : index.nodes.map(n => n.id));
-  for (const step of scene.steps.slice(0, stepIndex + 1)) {
-    for (const id of resolveNodes(step.show, index)) visible.add(id);
-    for (const id of resolveNodes(step.hide, index)) visible.delete(id);
-  }
+  const visible = foldVisibility(scene.steps, stepIndex, index, resolveNodes);
 
   const cur = scene.steps[stepIndex];
   const focus = resolveNodes(cur.focus, index).filter(id => visible.has(id));
