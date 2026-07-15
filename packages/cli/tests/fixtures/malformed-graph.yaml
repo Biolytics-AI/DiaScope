@@ -1,0 +1,10 @@
+version: 1
+graph:
+  source: ./malformed.d2
+scenes:
+  - id: main
+    layout: two-pane
+    steps:
+      - id: intro
+        text:
+          title: Introduction

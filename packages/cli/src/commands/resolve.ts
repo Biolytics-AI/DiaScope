@@ -2,6 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { loadDocument, resolveStep, type SceneState } from "@diascope/core";
 import { WasmD2Compiler } from "@diascope/d2";
+import { toReadableD2Error } from "../d2-error.js";
 
 export interface ResolveReport {
   state: SceneState;
@@ -22,7 +23,12 @@ export async function runResolve(docPath: string, sceneId: string, stepIndex: nu
   } catch {
     throw new Error(`Graph source not found: ${graphPath} (referenced by ${docPath} as "${doc.graph.source}")`);
   }
-  const { index } = await new WasmD2Compiler().compile(await readFile(graphPath, "utf8"));
+  let index;
+  try {
+    ({ index } = await new WasmD2Compiler().compile(await readFile(graphPath, "utf8")));
+  } catch (e) {
+    throw toReadableD2Error(e);
+  }
   const state = resolveStep(doc, sceneId, stepIndex, index);
   return { state, graphPath };
 }

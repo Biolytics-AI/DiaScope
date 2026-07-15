@@ -15,7 +15,9 @@ const fixtures = resolve(here, "fixtures");
 const validYaml = resolve(fixtures, "valid.yaml");
 const invalidYaml = resolve(fixtures, "invalid.yaml");
 const missingGraphYaml = resolve(fixtures, "missing-graph.yaml");
+const malformedGraphYaml = resolve(fixtures, "malformed-graph.yaml");
 const graphD2 = resolve(fixtures, "graph.d2");
+const malformedD2 = resolve(fixtures, "malformed.d2");
 
 describe("runValidate", () => {
   it("reports valid: true, no errors, for a valid doc", async () => {
@@ -49,6 +51,17 @@ describe("runValidate", () => {
     expect(error).toBeInstanceOf(Error);
     expect(error!.message).toContain(resolvedD2Path);
     expect(error!.message).toContain("not found");
+  }, 30_000);
+
+  it("surfaces readable d2 compile errors (not raw JSON) when the graph is malformed", async () => {
+    const err: Error = await runValidate(malformedGraphYaml).then(
+      () => {
+        throw new Error("expected runValidate to reject");
+      },
+      (e) => e as Error
+    );
+    expect(err.message).toContain("connection missing destination");
+    expect(err.message).not.toContain('{"range"');
   }, 30_000);
 });
 
@@ -89,9 +102,30 @@ describe("runResolve", () => {
     expect(error).toBeInstanceOf(Error);
     expect(error!.message).toContain("out of range");
   }, 30_000);
+  it("surfaces readable d2 compile errors (not raw JSON) when the graph is malformed", async () => {
+    const err: Error = await runResolve(malformedGraphYaml, "main", 0).then(
+      () => {
+        throw new Error("expected runResolve to reject");
+      },
+      (e) => e as Error
+    );
+    expect(err.message).toContain("connection missing destination");
+    expect(err.message).not.toContain('{"range"');
+  }, 30_000);
 });
 
 describe("runInspect", () => {
+  it("surfaces readable d2 compile errors (not raw JSON) on malformed d2", async () => {
+    const err: Error = await runInspect(malformedD2).then(
+      () => {
+        throw new Error("expected runInspect to reject");
+      },
+      (e) => e as Error
+    );
+    expect(err.message).toContain("connection missing destination");
+    expect(err.message).not.toContain('{"range"');
+  }, 30_000);
+
   it("returns the node/edge index for a D2 file", async () => {
     const index = await runInspect(graphD2);
     const api = index.nodes.find((n) => n.id === "sys.api");
