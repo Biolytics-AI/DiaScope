@@ -1,0 +1,54 @@
+version: 1
+graph:
+  source: ../../../examples/vLLM/deployment.d2
+scenes:
+  - id: request-path
+    text: { title: "Compliant GPU Blueprint" }
+    annotations:
+      nodes:
+        Biolytics.Runtime.Ingress: "<p>The external processing environment should only accept traffic from explicitly allowlisted client endpoints.</p>"
+      edges:
+        "authenticated request carrying clinical context": "This edge marks the handoff into externally hosted AI processing."
+    steps:
+      - id: overview
+        camera: { fit: all }
+        text:
+          title: "The full deployment"
+          body: "Every boundary a clinical request crosses on its way to external GPU processing. Press <strong>→</strong> to walk through it."
+      - id: boundary
+        focus: [HealthcareProvider.Controls.ClientAuth, Biolytics.Runtime.Ingress, Biolytics.Runtime.TLS]
+        trace: HealthcareProvider.Controls.ClientAuth->Biolytics.Runtime.Ingress->Biolytics.Runtime.TLS
+        popover:
+          target: Biolytics.Runtime.Ingress
+          content: "Only allowlisted client endpoints are accepted."
+        text:
+          title: "The boundary handoff"
+          body: "Provider-controlled clinical context leaves its environment at the authenticated handoff. Click the ingress node for detail."
+      - id: inference
+        focus: [Biolytics.Runtime.TLS, Biolytics.Runtime.Inference]
+        trace: Biolytics.Runtime.TLS->Biolytics.Runtime.Inference
+        popover:
+          target: Biolytics.Runtime.Inference
+          content: "vLLM runs non-root with a read-only root filesystem."
+        text:
+          title: "Inference inside the enclave"
+          body: "Decrypted requests exist only inside the private network enclave."
+  - id: audit-trail
+    text: { title: "Audit & evidence" }
+    steps:
+      - id: audit-overview
+        focus: [Biolytics.Storage.SafeAudit, Audit.AppLog, Audit.DeployProv, Audit.KeyLog]
+        text:
+          title: "What gets recorded"
+          body: "Metadata-only audit events; no plaintext prompt or response content."
+      - id: audit-flow
+        focus: [Biolytics.Storage.SafeAudit, Audit.AppLog]
+        trace: Biolytics.Storage.SafeAudit->Audit.AppLog
+        text:
+          title: "The audit write path"
+          body: "Operational metadata flows into the application audit log."
+      - id: dpo
+        focus: [HealthcareProvider.Actors.DPO, Audit.AppLog, Audit.ProviderEvidence, Audit.DPA]
+        text:
+          title: "The DPO's review surface"
+          body: "Application trail, provider evidence, and the contractual basis."
