@@ -39,6 +39,24 @@ describe("WasmD2Compiler", () => {
   it("throws a readable error on invalid d2", async () => {
     await expect(new WasmD2Compiler().compile("a -> ")).rejects.toThrow();
   }, 30_000);
+
+  it("handles concurrent compiles without deadlocking", async () => {
+    const SRC2 = `
+db: Database { class: store }
+worker: Worker
+worker -> db: persist
+`;
+    const c = new WasmD2Compiler();
+    const [a, b] = await Promise.all([c.compile(SRC), c.compile(SRC2)]);
+
+    const api = a.index.nodes.find((n) => n.id === "sys.api")!;
+    expect(api.parent).toBe("sys");
+    expect(a.index.edges[0]).toMatchObject({ source: "request", target: "sys.api", label: "query" });
+
+    const db = b.index.nodes.find((n) => n.id === "db")!;
+    expect(db.classes).toContain("store");
+    expect(b.index.edges[0]).toMatchObject({ source: "worker", target: "db", label: "persist" });
+  }, 60_000);
 });
 
 describe("inspectGraph", () => {
