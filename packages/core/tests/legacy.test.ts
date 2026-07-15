@@ -111,4 +111,14 @@ describe("fromLegacyStory: synthetic minimal stories", () => {
     const doc = fromLegacyStory(story);
     expect("annotations" in doc.scenes[0]).toBe(false);
   });
+
+  it("throws a readable error (not raw Zod JSON) for an invalid conversion result", () => {
+    try {
+      fromLegacyStory({ steps: [] });
+      expect.unreachable("should have thrown");
+    } catch (err) {
+      expect((err as Error).message).toContain("Invalid narrative document");
+      expect((err as Error).message).not.toContain('"code":');
+    }
+  });
 });

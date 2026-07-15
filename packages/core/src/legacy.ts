@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { NarrativeDocument, Step } from "./schema.js";
 import { NarrativeDocumentSchema } from "./schema.js";
 
@@ -41,24 +42,34 @@ export function fromLegacyStory(story: LegacyStory): NarrativeDocument {
       : [overviewStep, ...narrated]
     : narrated;
 
-  return NarrativeDocumentSchema.parse({
-    version: 1,
-    graph: { source: story.meta?.d2_source ?? "diagram.d2" },
-    scenes: [
-      {
-        id: "main",
-        layout: "two-pane",
-        ...(story.meta?.title ? { text: { title: story.meta.title } } : {}),
-        ...(story.detail_panels || story.edge_tooltips
-          ? {
-              annotations: {
-                ...(story.detail_panels ? { nodes: story.detail_panels } : {}),
-                ...(story.edge_tooltips ? { edges: story.edge_tooltips } : {}),
-              },
-            }
-          : {}),
-        steps,
-      },
-    ],
-  });
+  try {
+    return NarrativeDocumentSchema.parse({
+      version: 1,
+      graph: { source: story.meta?.d2_source ?? "diagram.d2" },
+      scenes: [
+        {
+          id: "main",
+          layout: "two-pane",
+          ...(story.meta?.title ? { text: { title: story.meta.title } } : {}),
+          ...(story.detail_panels || story.edge_tooltips
+            ? {
+                annotations: {
+                  ...(story.detail_panels ? { nodes: story.detail_panels } : {}),
+                  ...(story.edge_tooltips ? { edges: story.edge_tooltips } : {}),
+                },
+              }
+            : {}),
+          steps,
+        },
+      ],
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw new Error(
+        "Invalid narrative document (converted from legacy story):\n" + z.prettifyError(err),
+        { cause: err }
+      );
+    }
+    throw err;
+  }
 }
