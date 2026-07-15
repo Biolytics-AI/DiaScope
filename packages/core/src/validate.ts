@@ -97,14 +97,25 @@ export function validateDocument(doc: NarrativeDocument, index: GraphIndex): Val
     return r;
   }
 
-  function validateTrace(trace: Step["trace"], path: string) {
+  function validateTrace(trace: Step["trace"], path: string, visible: ReadonlySet<string>) {
     if (trace === undefined) return;
     const specs = Array.isArray(trace) ? trace : [trace];
     const isArray = Array.isArray(trace);
     specs.forEach((spec, i) => {
       const specPath = isArray ? `${path}[${i}]` : path;
       try {
-        resolveTrace(spec, index);
+        const edges = resolveTrace(spec, index);
+        // Mirrors hidden-emphasis/hidden-popover: the renderer marks any edge touching a
+        // hidden node as hidden, so a traced edge with a hidden endpoint never shows.
+        for (const edge of edges) {
+          if (!visible.has(edge.source) || !visible.has(edge.target)) {
+            warnings.push({
+              path: specPath,
+              reason: "hidden-trace",
+              message: `trace edge "${edge.source} -> ${edge.target}" has a hidden endpoint and will not be visible at this step`,
+            });
+          }
+        }
         const hops = spec.split("->").map(s => s.trim()).filter(Boolean);
         for (let h = 0; h < hops.length - 1; h++) {
           const a = hops[h], b = hops[h + 1];
@@ -178,7 +189,7 @@ export function validateDocument(doc: NarrativeDocument, index: GraphIndex): Val
 
       resolveSelectorVerb(step.dim, `${stepPath}.dim`);
 
-      validateTrace(step.trace, `${stepPath}.trace`);
+      validateTrace(step.trace, `${stepPath}.trace`, visible);
       validatePopover(step.popover, `${stepPath}.popover`, visible);
 
       if (step.camera && Array.isArray(step.camera.fit)) {

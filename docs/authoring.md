@@ -34,11 +34,13 @@ forward does, so forward and backward navigation are always consistent.
 
 1. **Get or write a `.d2` file.** Use dot notation for nested node ids (a node `api`
    inside a container `sys` has id `sys.api`) and D2 `class:` tags for anything you want
-   to select as a group later.
+   to select as a group later. This guide assumes you know basic D2 syntax — containers,
+   labels, class tags; for the rest of the language see
+   [https://d2lang.com/tour/intro](https://d2lang.com/tour/intro).
 2. **Inspect it** to get the exact, case-sensitive node/edge ids you're allowed to
    reference — never guess an id from reading the `.d2` source, always confirm it here:
 
-   ```
+   ```bash
    node packages/cli/dist/index.js graph inspect packages/cli/tests/fixtures/graph.d2 --json
    ```
 
@@ -58,7 +60,9 @@ forward does, so forward and backward navigation are always consistent.
    ```
 
    Every `nodes[].id` is a legal string selector. Every edge's `source`/`target` pair is
-   a legal `trace` hop, written as `"source->target"`.
+   a legal `trace` hop, written as `"source->target"`. Note that D2 container/group nodes
+   are themselves addressable node ids — `sys` above is a real node you can `show`,
+   `hide`, or `focus`, in addition to its child `sys.api`.
 
 3. **Write `story.yaml` next to the `.d2` file** (see § 3 for the full field reference).
    `graph.source` is a path **relative to the `.story.yaml` file's own directory**, not
@@ -66,7 +70,7 @@ forward does, so forward and backward navigation are always consistent.
 
 4. **Validate it:**
 
-   ```
+   ```bash
    node packages/cli/dist/index.js validate packages/cli/tests/fixtures/valid.yaml --json
    ```
 
@@ -212,6 +216,9 @@ A **`NodeSelector`** is one of:
 
 - **A string**: an exact node id, dot-notation for nesting (`sys.api`), **case-sensitive**,
   and must be one of the ids `graph inspect` prints for this graph. Nothing else matches.
+  D2 container/group nodes are addressable node ids in their own right (`sys` is a valid
+  selector distinct from `sys.api`), and selecting a container does **not** implicitly
+  select its children.
 - **`{ class: "name" }`**: every node whose D2 `class:` list contains `name` (from
   `graph inspect`'s `classes` array for that node). Matches zero or more nodes.
 - **`{ not: <selector> }`**: every node in the **entire graph** that the inner selector
@@ -255,7 +262,7 @@ does; nothing else in the system reinterprets it.
 | `focus` | Resolves to the set of currently-*visible* nodes matching the selector (unresolvable/hidden matches are dropped). If `highlight` is **not** set on the same step, `highlighted` defaults to this `focus` set. **Side effect:** whenever `focus` is non-empty, every other currently-visible node (i.e. not in `focus` and not in `highlight`) is added to `dimmed` — this is the "focus dims the rest" behavior. |
 | `highlight` | Resolves to the set of currently-visible nodes matching the selector; overrides the `focus`-derived default. Highlighting **on its own** (no `focus` set on that step) does **not** dim anything else — it's a pure "glow these nodes" with no side effect. Pair it with `focus` (or an explicit `dim`) if you also want the rest of the diagram to recede. |
 | `dim` | An explicit selector, resolved and filtered to currently-visible nodes. **Explicit `dim` never contradicts emphasis**: any id also present in that step's resolved `focus` or `highlight` set is excluded from `dimmed`, no matter what `dim` says — focus/highlight always win. This explicit set is unioned with whatever `focus`'s auto-dim side effect (above) already added. |
-| `trace` | Resolves the hop-chain(s) to a list of graph edges (§ 4), current step only — **not cumulative** like visibility; a trace from a previous step disappears unless repeated. |
+| `trace` | Resolves the hop-chain(s) to a list of graph edges (§ 4), current step only — **not cumulative** like visibility; a trace from a previous step disappears unless repeated. A traced edge whose source or target node is hidden at that step will **not** be visible (the renderer hides any edge touching a hidden node) — `validate` flags this as a `hidden-trace` warning. |
 | `popover` | A `{target, content}` or array of them, current step only. A popover whose `target` is **not currently visible is silently dropped** (not rendered) — `validate` flags this as a `hidden-popover` warning, but it isn't an error. |
 | `camera` | Controls what the diagram viewport fits to, current step only. Three forms: absent or `{fit: "selection"}` → fits `highlighted ∪ focus` (that step's "selection"), **falling back to fitting every currently-visible node if the selection is empty**; `{fit: "all"}` → fits every currently-**visible** node (i.e. only what `show`/`hide` has left visible at this point — not necessarily the whole graph); `{fit: [selector, ...]}` → fits exactly the resolved selector list, and this explicit-array form is **not filtered by visibility** (it can target geometry of a currently-hidden node, e.g. to pre-frame where something will appear). |
 
@@ -296,6 +303,7 @@ location in the document), `message`, `reason`, and optionally `suggestions`.
 | `ambiguous-edge` | A trace hop matches more than one parallel D2 edge between the same source/target pair; the **first-declared** edge is used. |
 | `hidden-emphasis` | A step's `focus` or `highlight` resolves **only** to nodes that are hidden at that step (i.e. none of the matches are currently visible). |
 | `hidden-popover` | A popover's `target` is not visible at that step, so it won't render. |
+| `hidden-trace` | A resolved trace edge has a hidden endpoint at that step, so the traced edge won't render. Real CLI message: `trace edge "sys.api -> cache" has a hidden endpoint and will not be visible at this step`. |
 
 **Exit codes:** `0` — valid (`errors: []`, regardless of warnings). `1` — `errors` is
 non-empty (the JSON body still has the normal `{valid, errors, warnings, graphPath}`

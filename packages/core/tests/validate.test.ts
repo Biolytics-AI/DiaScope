@@ -109,6 +109,26 @@ describe("validateDocument", () => {
     expect(w).toBeDefined();
   });
 
+  it("warns hidden-trace when a resolved trace edge has a hidden endpoint at that step", () => {
+    const d = doc([
+      { id: "st0", hide: ["sys.api"] },
+      { id: "st1", trace: "request->sys.api" },
+    ]);
+    const result = validateDocument(d, index);
+    expect(result.errors).toEqual([]);
+    const w = result.warnings.find(w => w.reason === "hidden-trace");
+    expect(w).toBeDefined();
+    expect(w!.path).toBe("scenes[0].steps[1].trace");
+    expect(w!.message).toContain('trace edge "request -> sys.api"');
+  });
+
+  it("does not warn hidden-trace when both trace endpoints are visible", () => {
+    const d = doc([{ id: "st0", trace: "sys.api->sys.db" }]);
+    const result = validateDocument(d, index);
+    expect(result.errors).toEqual([]);
+    expect(result.warnings.filter(w => w.reason === "hidden-trace")).toEqual([]);
+  });
+
   it("errors on annotations.nodes keyed by an unknown node id", () => {
     const d = doc([{ id: "st0" }], { annotations: { nodes: { "sys.apoz": "note" } } });
     const result = validateDocument(d, index);
