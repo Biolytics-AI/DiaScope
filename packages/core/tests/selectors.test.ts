@@ -35,6 +35,13 @@ describe("resolveNodes", () => {
       expect((e as UnknownReferenceError).suggestions).toContain("sys.api");
     }
   });
+  it("fails fast on the first unknown id in an array", () => {
+    try { resolveNodes(["bad1", "bad2"], index); throw new Error("no throw"); }
+    catch (e) {
+      expect(e).toBeInstanceOf(UnknownReferenceError);
+      expect((e as UnknownReferenceError).ref).toBe("bad1");
+    }
+  });
 });
 
 describe("resolveTrace", () => {
@@ -49,10 +56,39 @@ describe("resolveTrace", () => {
   it("returns [] for undefined", () => {
     expect(resolveTrace(undefined, index)).toEqual([]);
   });
+  it("returns [] for empty string and empty array", () => {
+    expect(resolveTrace("", index)).toEqual([]);
+    expect(resolveTrace([], index)).toEqual([]);
+  });
   it("throws on missing edge with suggestions", () => {
     expect(() => resolveTrace("request->sys.db", index)).toThrow(UnknownReferenceError);
+    try { resolveTrace("request->sys.db", index); throw new Error("no throw"); }
+    catch (e) {
+      expect(e).toBeInstanceOf(UnknownReferenceError);
+      expect((e as UnknownReferenceError).suggestions).toContain("request->sys.api");
+      expect((e as UnknownReferenceError).message).toContain("did you mean");
+    }
   });
   it("throws on unknown hop node", () => {
     expect(() => resolveTrace("request->sys.apo", index)).toThrow(UnknownReferenceError);
+  });
+  it("explains single-hop traces instead of a bare unknown-edge error", () => {
+    try { resolveTrace("request", index); throw new Error("no throw"); }
+    catch (e) {
+      expect(e).toBeInstanceOf(UnknownReferenceError);
+      expect((e as UnknownReferenceError).kind).toBe("trace");
+      expect((e as UnknownReferenceError).message).toContain("a trace needs at least two node ids");
+    }
+  });
+  it("resolves parallel edges to the first ([0]) match", () => {
+    const parallel: GraphIndex = {
+      nodes: index.nodes,
+      edges: [
+        ...index.edges,
+        { id: "(request -> sys.api)[1]", source: "request", target: "sys.api", label: "retry" },
+      ],
+    };
+    const edges = resolveTrace("request->sys.api", parallel);
+    expect(edges.map(e => e.id)).toEqual(["(request -> sys.api)[0]"]);
   });
 });

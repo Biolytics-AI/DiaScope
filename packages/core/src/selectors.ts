@@ -2,8 +2,12 @@ import type { GraphEdge, GraphIndex } from "./graph.js";
 import type { NodeSelector } from "./schema.js";
 
 export class UnknownReferenceError extends Error {
-  constructor(public ref: string, public kind: "node" | "edge", public suggestions: string[]) {
-    super(`Unknown ${kind} "${ref}"${suggestions.length ? ` — did you mean: ${suggestions.join(", ")}?` : ""}`);
+  constructor(public ref: string, public kind: "node" | "edge" | "trace", public suggestions: string[]) {
+    super(
+      kind === "trace"
+        ? `Invalid trace "${ref}" — a trace needs at least two node ids separated by "->"`
+        : `Unknown ${kind} "${ref}"${suggestions.length ? ` — did you mean: ${suggestions.join(", ")}?` : ""}`
+    );
   }
 }
 
@@ -27,7 +31,10 @@ export function resolveNodes(sel: NodeSelector | NodeSelector[] | undefined, ind
   if (sel === undefined) return [];
   if (Array.isArray(sel)) {
     const out: string[] = [];
-    for (const s of sel) for (const id of resolveNodes(s, index)) if (!out.includes(id)) out.push(id);
+    const seen = new Set<string>();
+    for (const s of sel)
+      for (const id of resolveNodes(s, index))
+        if (!seen.has(id)) { seen.add(id); out.push(id); }
     return out;
   }
   if (typeof sel === "string") {
@@ -39,6 +46,15 @@ export function resolveNodes(sel: NodeSelector | NodeSelector[] | undefined, ind
   return index.nodes.map(n => n.id).filter(id => !excluded.has(id));
 }
 
+/**
+ * Finds the edge from `source` to `target` in the index.
+ *
+ * When the D2 source declares parallel edges between the same pair of nodes
+ * (e.g. `(a -> b)[0]` and `(a -> b)[1]`), the FIRST match wins: traces can
+ * only ever reference the `[0]` edge, and later parallels are unreachable via
+ * `resolveTrace`. This is a known M1 limitation; validation warns about it in
+ * a later milestone.
+ */
 export function findEdge(source: string, target: string, index: GraphIndex): GraphEdge | undefined {
   return index.edges.find(e => e.source === source && e.target === target);
 }
@@ -49,7 +65,7 @@ export function resolveTrace(trace: string | string[] | undefined, index: GraphI
   const out: GraphEdge[] = [];
   for (const spec of specs) {
     const hops = spec.split("->").map(s => s.trim()).filter(Boolean);
-    if (hops.length < 2) throw new UnknownReferenceError(spec, "edge", []);
+    if (hops.length < 2) throw new UnknownReferenceError(spec, "trace", []);
     for (let i = 0; i < hops.length - 1; i++) {
       for (const hop of [hops[i], hops[i + 1]]) {
         if (!index.nodes.some(n => n.id === hop))
