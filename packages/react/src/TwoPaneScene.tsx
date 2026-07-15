@@ -14,6 +14,7 @@ import {
   type ViewBox,
   type ContentTransform,
 } from "./camera.js";
+import { sceneLayout } from "./layout.js";
 
 export interface TwoPaneSceneProps {
   svg: string;
@@ -53,6 +54,10 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
   // Nodes that open a drawer — handed to GraphCanvas so it can make exactly those elements
   // keyboard-focusable. Memoized so GraphCanvas's attribute effect doesn't churn each render.
   const interactiveNodeIds = useMemo(() => Object.keys(scene?.annotations?.nodes ?? {}), [scene]);
+
+  // Decided once per document from the diagram's true aspect (union of node geometry), so the
+  // layout never thrashes between steps — see docs/superpowers/specs/2026-07-15-adaptive-layout-design.md.
+  const layout = useMemo(() => sceneLayout(index), [index]);
 
   // Re-runs when `scene` presence flips (e.g. a doc update fixes a bad sceneId) so the
   // freshly-mounted valid root still registers; installLayoutDebug dedupes via a Set.
@@ -171,7 +176,7 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
   }
 
   return (
-    <div ref={rootRef} data-diascope-part="scene" className="ds-scene">
+    <div ref={rootRef} data-diascope-part="scene" className="ds-scene" data-diascope-layout={layout}>
       <div className="ds-scene-inner">
       <div ref={canvasWrapRef} className="ds-canvas-wrap">
         <GraphCanvas

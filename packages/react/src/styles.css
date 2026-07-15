@@ -299,3 +299,31 @@
     max-height: 40%;
   }
 }
+
+/* --- Stacked layout (wide diagrams): diagram on top, narration band below --- */
+/* First cut — a follow-up browser pass tunes max-height / grid ratios against real content
+   (see docs/superpowers/specs/2026-07-15-adaptive-layout-design.md). */
+.ds-scene[data-diascope-layout="stacked"] .ds-scene-inner {
+  flex-direction: column;
+}
+.ds-scene[data-diascope-layout="stacked"] .ds-canvas-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+.ds-scene[data-diascope-layout="stacked"] .ds-pane {
+  flex: 0 0 auto;
+  width: 100%;
+  max-height: 34%;
+  /* Reflow the pane into a wide short band: pills across the top, then title + body. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  grid-template-areas: "pills pills" "title body";
+  column-gap: 20px;
+  row-gap: 6px;
+  align-content: start;
+}
+.ds-scene[data-diascope-layout="stacked"] .ds-pills { grid-area: pills; margin-bottom: 4px; }
+.ds-scene[data-diascope-layout="stacked"] .ds-title { grid-area: title; margin: 0; }
+.ds-scene[data-diascope-layout="stacked"] .ds-body  { grid-area: body; }
+.ds-scene[data-diascope-layout="stacked"] .ds-nav   { display: none; }

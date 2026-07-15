@@ -1,5 +1,6 @@
 export * from "./state-classes.js";
 export * from "./camera.js";
+export * from "./layout.js";
 export * from "./trace.js";
 export * from "./GraphCanvas.js";
 export * from "./PopoverLayer.js";

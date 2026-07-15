@@ -228,6 +228,65 @@ describe("TwoPaneScene / useNarrative / debug layout", () => {
       );
     }
   });
+
+  // The layout decision (see src/layout.ts) is derived purely from index geometry, not from
+  // the svg itself, so these use hand-built indexes with deterministic union-bounds aspect
+  // ratios (well above/below WIDE_ASPECT_THRESHOLD = 2.2) rather than depending on the real
+  // compiled SRC diagram's incidental aspect. They reuse the real compiled `svg` from
+  // beforeAll (a real svg is required to render), plus a minimal doc whose single step uses
+  // `camera: { fit: "all" }` and no annotations — resolveStep only consults `index` for its
+  // node-id list in that case (never geometry), so a real svg + a fabricated, mismatched
+  // index is safe: SvgGraphBinding just finds no matching elements and binds/fits nothing,
+  // with no throw (see packages/d2/src/binding.ts). This keeps the assertion deterministic
+  // and independent of exactly what the SRC diagram happens to compile to.
+  function geomIndex(geoms: [number, number, number, number][]): GraphIndex {
+    return {
+      nodes: geoms.map((g, i) => ({
+        id: `n${i}`,
+        label: `n${i}`,
+        classes: [],
+        parent: null,
+        geometry: { x: g[0], y: g[1], width: g[2], height: g[3] },
+      })),
+      edges: [],
+    };
+  }
+
+  const layoutDoc: NarrativeDocument = {
+    version: 1,
+    graph: { source: SRC },
+    scenes: [
+      {
+        id: "main",
+        layout: "two-pane",
+        text: { title: "Scene Title" },
+        steps: [{ text: { title: "Step" }, camera: { fit: "all" } }],
+      },
+    ],
+  };
+
+  it('sets data-diascope-layout="stacked" on the scene root for a wide diagram (union aspect > threshold)', () => {
+    // union bounds: x 0..800, y 0..100 => 8:1, well above WIDE_ASPECT_THRESHOLD (2.2).
+    const wideIndex = geomIndex([
+      [0, 0, 100, 100],
+      [700, 0, 100, 100],
+    ]);
+    const { container } = render(
+      <TwoPaneScene svg={svg} index={wideIndex} doc={layoutDoc} sceneId="main" stepIndex={0} onGoto={vi.fn()} />
+    );
+    const scene = container.querySelector('[data-diascope-part="scene"]');
+    expect(scene!.getAttribute("data-diascope-layout")).toBe("stacked");
+  });
+
+  it('sets data-diascope-layout="side-by-side" on the scene root for a tall diagram (union aspect <= threshold)', () => {
+    // union bounds: x 0..100, y 0..400 => 0.25:1, well below WIDE_ASPECT_THRESHOLD (2.2).
+    const tallIndex = geomIndex([[0, 0, 100, 400]]);
+    const { container } = render(
+      <TwoPaneScene svg={svg} index={tallIndex} doc={layoutDoc} sceneId="main" stepIndex={0} onGoto={vi.fn()} />
+    );
+    const scene = container.querySelector('[data-diascope-part="scene"]');
+    expect(scene!.getAttribute("data-diascope-layout")).toBe("side-by-side");
+  });
 });
 
 describe("useNarrative", () => {
