@@ -8,9 +8,10 @@ export const NodeSelectorSchema: z.ZodType<NodeSelector> = z.lazy(() =>
     z.strictObject({ not: NodeSelectorSchema }),
   ])
 );
+z.globalRegistry.add(NodeSelectorSchema, { id: "NodeSelector" });
 const Sel = z.union([NodeSelectorSchema, z.array(NodeSelectorSchema)]);
 
-export const PopoverSchema = z.strictObject({ target: z.string(), content: z.string() });
+export const PopoverSchema = z.strictObject({ target: z.string().min(1), content: z.string() });
 export const CameraSchema = z.strictObject({
   fit: z.union([z.literal("selection"), z.literal("all"), z.array(NodeSelectorSchema)]),
 });
@@ -54,4 +55,5 @@ export const NarrativeDocumentSchema = z.strictObject({
 export type Step = z.infer<typeof StepSchema>;
 export type Scene = z.infer<typeof SceneSchema>;
 export type NarrativeDocument = z.infer<typeof NarrativeDocumentSchema>;
+export type NarrativeDocumentInput = z.input<typeof NarrativeDocumentSchema>;
 export type Popover = z.infer<typeof PopoverSchema>;

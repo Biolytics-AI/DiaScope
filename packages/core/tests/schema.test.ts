@@ -17,8 +17,26 @@ const valid = {
 };
 
 describe("NarrativeDocumentSchema", () => {
-  it("parses a full document including deferred verbs", () => {
-    expect(NarrativeDocumentSchema.parse(valid)).toBeTruthy();
+  it("parses a full document including deferred verbs and defaults layout", () => {
+    // `valid` omits `layout` on the scene; parsing must default it to "two-pane"
+    expect(NarrativeDocumentSchema.parse(valid)).toMatchObject({
+      version: 1,
+      scenes: [{ id: "overview", layout: "two-pane" }],
+    });
+  });
+  it("parses nested recursive selectors", () => {
+    const doc = structuredClone(valid);
+    (doc.scenes[0].steps[1] as any).dim = { not: { not: { class: "svc" } } };
+    expect(NarrativeDocumentSchema.parse(doc)).toBeTruthy();
+  });
+  it("parses popover and camera array forms", () => {
+    const doc = structuredClone(valid);
+    (doc.scenes[0].steps[1] as any).popover = [
+      { target: "b", content: "hi" },
+      { target: "c", content: "yo" },
+    ];
+    (doc.scenes[0].steps[0] as any).camera = { fit: ["a", { class: "x" }] };
+    expect(NarrativeDocumentSchema.parse(doc)).toBeTruthy();
   });
   it("rejects unknown step keys and bad versions", () => {
     expect(() => NarrativeDocumentSchema.parse({ ...valid, version: 2 })).toThrow();
@@ -28,5 +46,8 @@ describe("NarrativeDocumentSchema", () => {
   });
   it("requires at least one scene and one step", () => {
     expect(() => NarrativeDocumentSchema.parse({ version: 1, graph: { source: "x" }, scenes: [] })).toThrow();
+    expect(() => NarrativeDocumentSchema.parse({
+      version: 1, graph: { source: "x" }, scenes: [{ id: "s", steps: [] }],
+    })).toThrow();
   });
 });
