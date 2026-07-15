@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { runValidate } from "../src/commands/validate.js";
 import { runInspect } from "../src/commands/inspect.js";
+import { runResolve } from "../src/commands/resolve.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -48,6 +49,45 @@ describe("runValidate", () => {
     expect(error).toBeInstanceOf(Error);
     expect(error!.message).toContain(resolvedD2Path);
     expect(error!.message).toContain("not found");
+  }, 30_000);
+});
+
+describe("runResolve", () => {
+  it("returns the computed SceneState for a valid scene+step", async () => {
+    const { state, graphPath } = await runResolve(validYaml, "main", 0);
+    expect(graphPath).toBe(graphD2);
+    expect(state.highlighted).toEqual(["request"]);
+    expect(state.visible).toContain("request");
+  }, 30_000);
+
+  it("reflects a step's trace and popover", async () => {
+    const { state } = await runResolve(validYaml, "main", 1);
+    expect(state.traced).toHaveLength(1);
+    expect(state.traced[0]).toMatchObject({ source: "request", target: "sys.api" });
+    expect(state.popovers).toHaveLength(1);
+    expect(state.popovers[0]).toMatchObject({ target: "sys.api" });
+  }, 30_000);
+
+  it("throws an actionable error for an unknown scene", async () => {
+    let error: Error | undefined;
+    try {
+      await runResolve(validYaml, "nope", 0);
+    } catch (e) {
+      error = e as Error;
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect(error!.message).toContain("Unknown scene");
+  }, 30_000);
+
+  it("throws an actionable error for an out-of-range step", async () => {
+    let error: Error | undefined;
+    try {
+      await runResolve(validYaml, "main", 99);
+    } catch (e) {
+      error = e as Error;
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect(error!.message).toContain("out of range");
   }, 30_000);
 });
 
@@ -117,6 +157,39 @@ describe("bin smoke test", () => {
     for (const line of stdout.split("\n").filter((l) => l.length > 0)) {
       expect(line).toMatch(/^(node|edge) /);
     }
+  }, 30_000);
+
+  it("resolve --json on a valid doc+scene+step exits 0 and prints a SceneState", async () => {
+    if (!existsSync(distIndex)) return; // skip-if-no-dist
+    const { stdout } = await execFileAsync("node", [
+      distIndex,
+      "resolve",
+      validYaml,
+      "--scene",
+      "main",
+      "--step",
+      "1",
+      "--json",
+    ]);
+    const parsed = JSON.parse(stdout);
+    expect(Array.isArray(parsed.visible)).toBe(true);
+    expect(Array.isArray(parsed.highlighted)).toBe(true);
+    expect(Array.isArray(parsed.cameraFit)).toBe(true);
+  }, 30_000);
+
+  it("resolve on an unknown scene exits 2 with a readable fatal message", async () => {
+    if (!existsSync(distIndex)) return; // skip-if-no-dist
+    const err: { code?: number; stderr?: string } = await execFileAsync("node", [
+      distIndex,
+      "resolve",
+      validYaml,
+      "--scene",
+      "nope",
+      "--step",
+      "0",
+    ]).catch((e) => e);
+    expect(err.code).toBe(2);
+    expect(err.stderr ?? "").toContain("Unknown scene");
   }, 30_000);
 
   it("does not clip stdout on large `graph inspect` output (vLLM example)", async () => {

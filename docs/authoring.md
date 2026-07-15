@@ -113,9 +113,42 @@ forward does, so forward and backward navigation are always consistent.
    repeat until the JSON says `"valid": true`. Then read the `warnings` array — it
    doesn't block you, but every warning reason is worth understanding (§ 6).
 
-`validate` also has a non-JSON mode (drop `--json`) that prints `ERROR <path>: <message>`
-/ `warn <path>: <message>` lines and a final `✓ valid` or `✗ N error(s)`; prefer `--json`
-for programmatic iteration.
+   `validate` also has a non-JSON mode (drop `--json`) that prints `ERROR <path>: <message>`
+   / `warn <path>: <message>` lines and a final `✓ valid` or `✗ N error(s)`; prefer
+   `--json` for programmatic iteration.
+
+6. **Preview a step's computed state with `resolve`**, once the document validates, to
+   check what a given `scenes[].id` + step index will actually render — visible/
+   highlighted/dimmed node ids, traced edges, open popovers, and the camera fit — without
+   starting the deck:
+
+   ```bash
+   node packages/cli/dist/index.js resolve packages/cli/tests/fixtures/valid.yaml --scene main --step 1
+   ```
+
+   Real output for that fixture's `main` scene, step 1 (a step with `trace:
+   request->sys.api` and a popover on `sys.api`):
+
+   ```text
+   scene:       main
+   step:        1
+   visible:     request, sys, sys.api
+   highlighted: (none)
+   dimmed:      (none)
+   traced:      request -> sys.api
+   popovers:    sys.api: "The API service handles incoming requests."
+   cameraFit:   sys, sys.api, request
+   text.title:  The request path
+   text.body:   (none)
+   ```
+
+   `--scene` and `--step` are both required (`--step` is the 0-based index into that
+   scene's `steps` array). Add `--json` for a machine-readable `SceneState` object
+   (`{visible, highlighted, dimmed, traced, popovers, cameraFit, text}`) instead of the
+   labeled-lines format above — useful for scripting a check like "does step 2 actually
+   highlight the node I think it does" before wiring up the deck. An unknown `--scene` id
+   or an out-of-range `--step` exits 2 with a readable `fatal: ...` message (same exit-code
+   convention as a malformed document, § 6), not a silent empty result.
 
 ## 3. Document format reference
 
@@ -237,8 +270,19 @@ directed edge in the compiled graph — `resolveTrace` looks the edge up as
 `source === a && target === b` exactly as declared. **Direction matters**: if the `.d2`
 file declares `a -> b`, the trace `"a->b"` resolves; `"b->a"` does not (it fails as an
 `unknown-reference`, because no edge has that source/target pair — even though both node
-ids individually exist). `trace` also accepts an array of hop-chain strings, for multiple
-disjoint traces active on the same step.
+ids individually exist).
+
+A **multi-hop chain traces every consecutive-pair edge in it simultaneously, on that same
+step** — `trace: "a->b->c"` traces both `a->b` and `b->c` at once (both edges render as
+traced together), not one after the other across steps. If instead you want two (or more)
+*disjoint* traces live on the same step, use the array form — a list of independent
+hop-chain strings, each resolved and traced on its own:
+
+```yaml
+trace: ["x->y", "p->q"]   # two unrelated single-hop traces, both traced on this step
+```
+
+(The array form also accepts multi-hop chains as elements, e.g. `["a->b->c", "x->y"]`.)
 
 **Edge annotations** (`scenes[].annotations.edges`) are keyed by the edge's **label**
 exactly as authored in the `.d2` file (e.g. `"check cache"` for `a -> b: "check cache"`),
@@ -246,6 +290,12 @@ or by `"source->target"` — the renderer tries the label first, then falls back
 `source->target`. These keys are **not checked** by `validate` (there is no reliable way
 to validate a label match ahead of render time), so a typo here fails silently instead of
 producing an error — double-check spelling against `graph inspect`'s edge `label` field.
+
+**If two different edges share the exact same label**, a label-keyed annotation is
+ambiguous: the lookup is by label text, not edge identity, so hovering *either* edge shows
+whichever content that shared label key resolves to first — you cannot target just one of
+them this way. Prefer unique labels per edge, or key the annotation by `"source->target"`
+instead (always unambiguous, since a given ordered pair identifies one edge).
 
 ## 5. Verb semantics table
 
@@ -257,7 +307,7 @@ does; nothing else in the system reinterprets it.
 
 | Verb | Semantics |
 |---|---|
-| `show` | Adds node ids to the scene's **visibility fold**. The fold is cumulative across all steps `0..k` in the scene, computed fresh for every step (not delta-tracked): visibility seeds as **every node in the graph**, unless `steps[0].show` is present, in which case it seeds **empty**. Then, in step order, each step's `show` adds ids and `hide` removes them. A node not currently visible stays invisible regardless of what later verbs say about it (see `hidden-emphasis` / `hidden-popover` warnings, § 6). |
+| `show` | Adds node ids to the scene's **visibility fold**. The fold is cumulative across all steps `0..k` in the scene, computed fresh for every step (not delta-tracked): visibility seeds as **every node in the graph**, unless `steps[0].show` is present, in which case it seeds **empty**. Then, in step order, each step's `show` adds ids and `hide` removes them. A node not currently visible stays invisible regardless of what later verbs say about it (see `hidden-emphasis` / `hidden-popover` warnings, § 6). **Not recursive:** showing a container id does **not** show its children — list the container **and** each child you want visible. |
 | `hide` | Removes node ids from the same cumulative fold. `hide` after a `show` (even in a later step) wins — order in the fold is authoritative. |
 | `focus` | Resolves to the set of currently-*visible* nodes matching the selector (unresolvable/hidden matches are dropped). If `highlight` is **not** set on the same step, `highlighted` defaults to this `focus` set. **Side effect:** whenever `focus` is non-empty, every other currently-visible node (i.e. not in `focus` and not in `highlight`) is added to `dimmed` — this is the "focus dims the rest" behavior. |
 | `highlight` | Resolves to the set of currently-visible nodes matching the selector; overrides the `focus`-derived default. Highlighting **on its own** (no `focus` set on that step) does **not** dim anything else — it's a pure "glow these nodes" with no side effect. Pair it with `focus` (or an explicit `dim`) if you also want the rest of the diagram to recede. |

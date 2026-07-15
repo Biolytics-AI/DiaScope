@@ -1,0 +1,103 @@
+version: 1
+graph:
+  source: ./diagram.d2
+
+scenes:
+  - id: produce-consume
+    layout: two-pane
+    text:
+      title: "The happy path: publish, poll, process, persist"
+    annotations:
+      nodes:
+        kafka.orders_topic: "<p>The main topic. Partitioned so multiple consumer instances can process records in parallel while preserving per-key order.</p>"
+        consumers.worker: "<p>One instance in the <code>order-processor</code> consumer group. Each partition is owned by exactly one worker at a time.</p>"
+      edges:
+        "produce order.created": "Producers never talk to consumers directly — Kafka decouples them completely."
+    steps:
+      - id: intro
+        text:
+          title: "Producers publish events onto a partitioned Kafka topic"
+          body: "<p>The <strong>Order Service</strong> and <strong>Payment Service</strong> independently publish events onto the same topic. Kafka splits the topic across partitions so throughput scales horizontally.</p>"
+        show: [producers, producers.order_svc, producers.payment_svc, kafka, kafka.orders_topic]
+        camera:
+          fit: all
+      - id: consumer-polls
+        text:
+          title: "A consumer group polls the topic and processes each record"
+          body: "<p>Workers in the <strong>order-processor</strong> group pull batches off their assigned partitions.</p>"
+        show: [consumers, consumers.worker]
+        focus: [kafka.orders_topic, consumers.worker]
+        trace: "kafka.orders_topic->consumers.worker"
+        popover:
+          target: consumers.worker
+          content: "Each partition is owned by exactly one consumer instance in the group at a time."
+      - id: happy-path-write
+        text:
+          title: "On success, the worker commits its offset and writes downstream"
+        show: [db]
+        focus: [consumers.worker, db]
+        trace: "consumers.worker->db"
+        camera:
+          fit: [consumers.worker, db]
+      - id: recap-happy-path
+        text:
+          title: "Two independent producers, one topic, one consumer group"
+        highlight: { class: producer }
+        camera:
+          fit: all
+
+  - id: failure-and-recovery
+    layout: two-pane
+    text:
+      title: "When a message can't be processed"
+    annotations:
+      nodes:
+        kafka.dlq_topic: "<p>Dead-letter queue. Poison messages land here after exhausting retries, instead of blocking the partition or being silently dropped.</p>"
+      edges:
+        "max retries exceeded": "The retry count is tracked in a message header and checked by the consumer before each redelivery."
+    steps:
+      - id: failure-intro
+        text:
+          title: "A transient error triggers a retry instead of a commit"
+          body: "<p>A downstream timeout or lock conflict makes the worker <strong>nack</strong> the record. Rather than blocking the partition, it's routed to a dedicated retry topic.</p>"
+        show: [kafka, kafka.orders_topic, consumers, consumers.worker, kafka.retry_topic]
+        focus: [consumers.worker, kafka.retry_topic]
+        trace: "consumers.worker->kafka.retry_topic"
+        camera:
+          fit: all
+      - id: retry-redelivery
+        text:
+          title: "The retry topic redelivers the message after a backoff delay"
+        focus: [kafka.retry_topic, consumers.worker]
+        trace: "kafka.retry_topic->consumers.worker"
+        popover:
+          target: kafka.retry_topic
+          content: "A separate topic with its own consumer delay, so retries never block the main partition."
+      - id: dlq-after-max-retries
+        text:
+          title: "After exhausting retries, the message lands in the dead-letter queue"
+        show: [kafka.dlq_topic]
+        focus: [consumers.worker, kafka.dlq_topic]
+        trace: "consumers.worker->kafka.dlq_topic"
+        popover:
+          target: kafka.dlq_topic
+          content: "Poison messages are quarantined here instead of blocking or being silently dropped."
+      - id: monitoring-and-alerting
+        text:
+          title: "DLQ depth is monitored so failures never go unnoticed"
+        show: [monitor]
+        focus: [kafka.dlq_topic, monitor]
+        trace: "kafka.dlq_topic->monitor"
+        popover:
+          target: monitor
+          content: "Alerts fire when DLQ depth crosses a threshold, paging the on-call engineer."
+      - id: replay-tool
+        text:
+          title: "Once fixed, operators replay DLQ messages back onto the live topic"
+        show: [replay]
+        focus: [kafka.dlq_topic, replay, kafka.orders_topic]
+        trace:
+          - "kafka.dlq_topic->replay"
+          - "replay->kafka.orders_topic"
+        camera:
+          fit: all

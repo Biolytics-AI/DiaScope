@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { runValidate } from "./commands/validate.js";
 import { runInspect } from "./commands/inspect.js";
+import { runResolve } from "./commands/resolve.js";
 
 const program = new Command().name("diascope2").description("DiaScope v2 agent CLI");
 
@@ -22,6 +23,42 @@ program
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (opts.json) console.log(JSON.stringify({ valid: false, fatal: msg }, null, 2));
+      else console.error(`fatal: ${msg}`);
+      process.exitCode = 2;
+    }
+  });
+
+program
+  .command("resolve <doc>")
+  .description("Print the computed SceneState (visible/highlighted/dimmed/traced/popovers/cameraFit/text) for a scene+step")
+  .requiredOption("--scene <id>", "scene id")
+  .requiredOption("--step <n>", "step index (0-based)", (v: string) => parseInt(v, 10))
+  .option("--json", "machine-readable output")
+  .action(async (doc: string, opts: { scene: string; step: number; json?: boolean }) => {
+    try {
+      const { state, graphPath } = await runResolve(doc, opts.scene, opts.step);
+      if (opts.json) {
+        console.log(JSON.stringify({ ...state, graphPath }, null, 2));
+      } else {
+        console.log(`scene:       ${opts.scene}`);
+        console.log(`step:        ${opts.step}`);
+        console.log(`visible:     ${state.visible.join(", ") || "(none)"}`);
+        console.log(`highlighted: ${state.highlighted.join(", ") || "(none)"}`);
+        console.log(`dimmed:      ${state.dimmed.join(", ") || "(none)"}`);
+        console.log(
+          `traced:      ${state.traced.length ? state.traced.map(e => `${e.source} -> ${e.target}`).join(", ") : "(none)"}`
+        );
+        console.log(
+          `popovers:    ${state.popovers.length ? state.popovers.map(p => `${p.target}: "${p.content}"`).join("; ") : "(none)"}`
+        );
+        console.log(`cameraFit:   ${state.cameraFit.join(", ") || "(none)"}`);
+        console.log(`text.title:  ${state.text?.title ?? "(none)"}`);
+        console.log(`text.body:   ${state.text?.body ?? "(none)"}`);
+      }
+      process.exitCode = 0;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (opts.json) console.log(JSON.stringify({ error: msg }, null, 2));
       else console.error(`fatal: ${msg}`);
       process.exitCode = 2;
     }

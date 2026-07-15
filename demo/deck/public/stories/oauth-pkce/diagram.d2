@@ -1,0 +1,82 @@
+direction: right
+
+classes: {
+  actor: {
+    style.fill: "#1a2332"
+    style.stroke: "#7dd3fc"
+    style.font-color: "#e2e8f0"
+    style.stroke-width: 2
+  }
+  pkce: {
+    style.fill: "#3b2f1a"
+    style.stroke: "#fbbf24"
+    style.font-color: "#fef3c7"
+    style.stroke-width: 2
+  }
+  endpoint: {
+    style.fill: "#2e1a3b"
+    style.stroke: "#c4b5fd"
+    style.font-color: "#ede9fe"
+    style.stroke-width: 2
+  }
+}
+
+user: "User" {
+  class: actor
+}
+
+browser: "Browser (User Agent)" {
+  style.fill: "#132030"
+  style.stroke: "#38bdf8"
+  style.font-color: "#e0f2fe"
+}
+
+client: "Client App (SPA / Native)" {
+  style.fill: "#0f1f17"
+  style.stroke: "#34d399"
+  style.font-color: "#d1fae5"
+
+  app: "App Logic" {
+    style.fill: "#153826"
+    style.stroke: "#6ee7b7"
+    style.font-color: "#ecfdf5"
+  }
+  verifier: "PKCE Generator (code_verifier + code_challenge)" {
+    class: pkce
+  }
+}
+
+authserver: "Authorization Server" {
+  style.fill: "#1e1330"
+  style.stroke: "#a78bfa"
+  style.font-color: "#ede9fe"
+
+  authorize: "/authorize" {
+    class: endpoint
+  }
+  token: "/token" {
+    class: endpoint
+  }
+}
+
+resource: "Resource Server" {
+  style.fill: "#301418"
+  style.stroke: "#f87171"
+  style.font-color: "#fee2e2"
+
+  api: "Protected API" {
+    class: endpoint
+  }
+}
+
+user -> client.app: "starts sign-in"
+client.app -> client.verifier: "generate verifier + challenge"
+client.app -> browser: "redirect w/ code_challenge"
+browser -> authserver.authorize: "GET /authorize"
+authserver.authorize -> authserver.token: "stores code_challenge"
+authserver.authorize -> browser: "302 w/ auth code"
+browser -> client.app: "callback code"
+client.app -> authserver.token: "POST code + code_verifier"
+authserver.token -> client.app: "access token"
+client.app -> resource.api: "GET /resource (Bearer)"
+resource.api -> client.app: "protected data"
