@@ -1,4 +1,5 @@
 import yaml from "js-yaml";
+import { z } from "zod";
 import { NarrativeDocumentSchema, type NarrativeDocument } from "./schema.js";
 
 const KEY_ORDER = [
@@ -11,7 +12,14 @@ const KEY_ORDER = [
 const rank = (k: string) => { const i = KEY_ORDER.indexOf(k); return i === -1 ? KEY_ORDER.length : i; };
 
 export function loadDocument(text: string): NarrativeDocument {
-  return NarrativeDocumentSchema.parse(yaml.load(text));
+  try {
+    return NarrativeDocumentSchema.parse(yaml.load(text));
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw new Error("Invalid narrative document:\n" + z.prettifyError(err), { cause: err });
+    }
+    throw err;
+  }
 }
 
 export function canonicalYaml(doc: NarrativeDocument): string {

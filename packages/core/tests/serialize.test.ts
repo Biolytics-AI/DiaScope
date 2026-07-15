@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { z } from "zod";
 import { loadDocument, canonicalYaml } from "../src/serialize.js";
-import type { NarrativeDocument } from "../src/schema.js";
+import { NarrativeDocumentSchema, type NarrativeDocument } from "../src/schema.js";
 
 const schemaPath = fileURLToPath(new URL("../schema/narrative.schema.json", import.meta.url));
 
@@ -50,6 +51,21 @@ describe("loadDocument", () => {
   it("throws on non-object YAML", () => {
     expect(() => loadDocument("just a string")).toThrow();
   });
+
+  it("wraps schema errors into a readable message", () => {
+    const bad = sampleYaml.replace("version: 1", "version: 2");
+    let caught: unknown;
+    try {
+      loadDocument(bad);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(Error);
+    const message = (caught as Error).message;
+    expect(message).toContain("Invalid narrative document");
+    expect(message).toContain("version");
+    expect(message).not.toContain('"code":');
+  });
 });
 
 describe("canonicalYaml", () => {
@@ -86,5 +102,11 @@ describe("JSON Schema artifact", () => {
     expect(Object.keys(parsed.properties)).toEqual(
       expect.arrayContaining(["version", "graph", "scenes"])
     );
+  });
+
+  it("matches the schema generated from src (drift guard)", () => {
+    const generated = z.toJSONSchema(NarrativeDocumentSchema, { io: "input" });
+    const committed = JSON.parse(readFileSync(schemaPath, "utf-8"));
+    expect(generated).toEqual(committed);
   });
 });
