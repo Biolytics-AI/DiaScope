@@ -1,0 +1,33 @@
+{
+  "name": "@diascope/reveal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@diascope/core": "*",
+    "@diascope/d2": "*",
+    "@diascope/react": "*"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18",
+    "reveal.js": ">=5",
+    "@revealjs/react": ">=0.2.0"
+  },
+  "devDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@revealjs/react": "^0.2.1",
+    "reveal.js": "^6.0.0",
+    "@testing-library/react": "^16.0.0",
+    "jsdom": "^25.0.0"
+  }
+}
