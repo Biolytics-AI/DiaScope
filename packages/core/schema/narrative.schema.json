@@ -1,0 +1,370 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "const": 1
+    },
+    "graph": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "scenes": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "layout": {
+            "default": "two-pane",
+            "type": "string",
+            "const": "two-pane"
+          },
+          "text": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "annotations": {
+            "type": "object",
+            "properties": {
+              "nodes": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "edges": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "steps": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "body": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "show": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/NodeSelector"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/NodeSelector"
+                      }
+                    }
+                  ]
+                },
+                "hide": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/NodeSelector"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/NodeSelector"
+                      }
+                    }
+                  ]
+                },
+                "focus": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/NodeSelector"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/NodeSelector"
+                      }
+                    }
+                  ]
+                },
+                "highlight": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/NodeSelector"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/NodeSelector"
+                      }
+                    }
+                  ]
+                },
+                "dim": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/NodeSelector"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/NodeSelector"
+                      }
+                    }
+                  ]
+                },
+                "trace": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ]
+                },
+                "popover": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "content": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "content"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "target": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "content": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "target",
+                          "content"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  ]
+                },
+                "camera": {
+                  "type": "object",
+                  "properties": {
+                    "fit": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "selection"
+                        },
+                        {
+                          "type": "string",
+                          "const": "all"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/NodeSelector"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "fit"
+                  ],
+                  "additionalProperties": false
+                },
+                "annotate": {
+                  "type": "object",
+                  "properties": {
+                    "target": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "content": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "target",
+                    "content"
+                  ],
+                  "additionalProperties": false
+                },
+                "waitFor": {
+                  "type": "string",
+                  "const": "click"
+                },
+                "compare": {
+                  "type": "object",
+                  "properties": {
+                    "left": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/$defs/NodeSelector"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/NodeSelector"
+                          }
+                        }
+                      ]
+                    },
+                    "right": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/$defs/NodeSelector"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/NodeSelector"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "left",
+                    "right"
+                  ],
+                  "additionalProperties": false
+                },
+                "isolate": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/NodeSelector"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/NodeSelector"
+                      }
+                    }
+                  ]
+                },
+                "expand": {
+                  "type": "string"
+                },
+                "collapse": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "steps"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "version",
+    "graph",
+    "scenes"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "NodeSelector": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "properties": {
+            "class": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "class"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "not": {
+              "$ref": "#/$defs/NodeSelector"
+            }
+          },
+          "required": [
+            "not"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}
