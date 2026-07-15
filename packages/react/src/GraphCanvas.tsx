@@ -29,6 +29,7 @@ export function GraphCanvas({ svg, index, state, onNodeClick, onEdgeHover, onBin
   const [binding, setBinding] = useState<SvgGraphBinding | null>(null);
   const svgElRef = useRef<SVGSVGElement | null>(null);
   const prevStateRef = useRef<SceneState | null>(null);
+  const lastEdgeId = useRef<string | null>(null);
 
   // Mount/replace the inline SVG whenever the compiled diagram itself changes.
   useEffect(() => {
@@ -94,7 +95,15 @@ export function GraphCanvas({ svg, index, state, onNodeClick, onEdgeHover, onBin
       const id = lookup(e.target as Element, "node");
       if (id) onNodeClick?.(id);
     };
-    const move = (e: Event) => onEdgeHover?.(lookup(e.target as Element, "edge"), e as MouseEvent);
+    // Dedupe consecutive null hovers (e.g. moving across several non-edge elements in a
+    // row): only the first null after a real edge id fires, so onEdgeHover isn't spammed
+    // with redundant "nothing hovered" calls.
+    const move = (e: Event) => {
+      const id = lookup(e.target as Element, "edge");
+      if (id === null && lastEdgeId.current === null) return;
+      lastEdgeId.current = id;
+      onEdgeHover?.(id, e as MouseEvent);
+    };
 
     host.addEventListener("click", click);
     if (onEdgeHover) host.addEventListener("mousemove", move);

@@ -2,3 +2,8 @@ export * from "./state-classes.js";
 export * from "./camera.js";
 export * from "./trace.js";
 export * from "./GraphCanvas.js";
+export * from "./PopoverLayer.js";
+export * from "./NarrativePane.js";
+export * from "./TwoPaneScene.js";
+export * from "./useNarrative.js";
+export * from "./debug.js";
