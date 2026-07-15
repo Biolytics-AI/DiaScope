@@ -81,10 +81,23 @@
   border: 1px solid rgba(232, 240, 255, 0.1);
   border-radius: var(--ds-radius-lg);
 }
+/* Wide diagrams can extend past the fitted viewBox and get hard-clipped at the frame's
+   right edge; this subtle fade into the frame color makes the crop read as intentional.
+   It sits above the (static) svg host but below the z-indexed popover/tooltip/drawer
+   layers, so cards are never veiled by it. */
+.ds-canvas-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent 96%, var(--ds-surface-solid) 100%);
+}
 .ds-popover-layer {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 10;
 }
 .ds-popover {
   position: absolute;
@@ -113,7 +126,7 @@
   text-align: left;
 }
 .ds-scene .ds-title {
-  font-size: 22px;
+  font-size: 26px;
   line-height: 1.25;
   font-weight: 600;
   margin: 0 0 10px;
@@ -121,7 +134,7 @@
   text-wrap: balance;
 }
 .ds-scene .ds-body {
-  font-size: 16px;
+  font-size: 20px;
   line-height: 1.55;
   color: var(--ds-fg);
 }
@@ -134,8 +147,10 @@
 }
 .ds-scene .ds-pill {
   border-radius: 999px;
-  padding: 3px 12px;
-  min-height: 24px;
+  /* Pre-scale sizes chosen so the rendered hit area stays >=24px even under reveal's
+     narrow-viewport transform scale (~0.78 at 1000x700) — WCAG 2.5.8 target size. */
+  padding: 5px 14px;
+  min-height: 32px;
   font-size: 12px;
   line-height: 1.4;
   cursor: pointer;
@@ -166,7 +181,7 @@
   color: var(--ds-fg-muted);
   border-radius: var(--ds-radius-sm);
   min-width: 36px;
-  min-height: 28px;
+  min-height: 32px;
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
@@ -206,11 +221,13 @@
   position: absolute;
   right: 0;
   top: 0;
-  bottom: 0;
+  bottom: auto;
+  max-height: 100%;
   width: 320px;
   max-width: 80%;
   box-sizing: border-box;
-  background: var(--ds-panel);
+  /* Fully opaque: popovers/diagram must never bleed through the dialog. */
+  background: var(--ds-surface-solid);
   color: var(--ds-fg);
   padding: 16px;
   overflow-y: auto;
@@ -218,8 +235,8 @@
   text-align: left;
   font-size: 14px;
   line-height: 1.55;
-  border-left: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-lg) 0 0 var(--ds-radius-lg);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
   box-shadow: -10px 0 28px rgba(0, 0, 0, 0.35);
 }
 .ds-drawer p {

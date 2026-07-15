@@ -186,13 +186,17 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
             setContentTransform(readContentTransform(el));
           }}
         />
-        <PopoverLayer
-          popovers={state.popovers}
-          binding={binding}
-          viewBox={viewBox}
-          container={containerSize}
-          transform={contentTransform}
-        />
+        {/* Popovers are step annotations; the drawer is a focused dialog. Never show both —
+            a card sliding under/next to the dialog reads as bleed-through. */}
+        {!drawer && (
+          <PopoverLayer
+            popovers={state.popovers}
+            binding={binding}
+            viewBox={viewBox}
+            container={containerSize}
+            transform={contentTransform}
+          />
+        )}
         {tooltip && (
           <div
             data-diascope-part="tooltip"
