@@ -1,0 +1,180 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 100
+  }
+}
+
+direction: right
+
+title: "C2F functionality: what users and systems can do"
+
+classes: {
+  actor: {
+    shape: person
+    style: {
+      fill: "#ede9fe"
+      stroke: "#6d28d9"
+    }
+  }
+  action: {
+    shape: rectangle
+    style: {
+      fill: "#dce8f0"
+      stroke: "#2f6785"
+      border-radius: 6
+    }
+  }
+  artifact: {
+    shape: cylinder
+    style: {
+      fill: "#fef3c7"
+      stroke: "#d97706"
+    }
+  }
+  output: {
+    shape: rectangle
+    style: {
+      fill: "#dcfce7"
+      stroke: "#16a34a"
+      border-radius: 6
+      shadow: true
+    }
+  }
+  external: {
+    shape: rectangle
+    style: {
+      fill: "#fee2e2"
+      stroke: "#dc2626"
+      border-radius: 6
+    }
+  }
+}
+
+# ─── Actors ───────────────────────────────────────────────────────────────────
+Actors: {
+  label: "Who uses the platform"
+  shape: rectangle
+  style: {
+    fill: "#f5f3ff"
+    stroke: "#6d28d9"
+    stroke-width: 2
+    border-radius: 8
+  }
+
+  Engineer: { label: "Data / integration engineer"; class: actor }
+  Curator: { label: "Taxonomy curator"; class: actor }
+  Operator: { label: "Platform operator"; class: actor }
+  Agent: { label: "Gerimedica AI agent"; class: actor }
+}
+
+# ─── Ingestion ────────────────────────────────────────────────────────────────
+Ingestion: {
+  label: "Corpus ingestion"
+  shape: rectangle
+  style: {
+    fill: "#eef5f9"
+    stroke: "#2f6785"
+    stroke-width: 2
+    border-radius: 8
+  }
+
+  Submit: { label: "Submit PHI-minimized batch\nPOST /v1/batches"; class: action }
+  Extract: { label: "Extract structured records"; class: action }
+  BuildIndex: { label: "Build search index"; class: action }
+  BatchStore: { label: "Batch source artifacts"; class: artifact }
+  RecordStore: { label: "Extracted records\n(relational)"; class: artifact }
+}
+
+# ─── Authoring ────────────────────────────────────────────────────────────────
+Authoring: {
+  label: "Taxonomy authoring"
+  shape: rectangle
+  style: {
+    fill: "#fefce8"
+    stroke: "#ca8a04"
+    stroke-width: 2
+    border-radius: 8
+  }
+
+  OpenWorkbench: { label: "Open workbench\n(project-scoped)"; class: action }
+  EditDraft: { label: "Edit draft taxonomy\n(nodes + edges)"; class: action }
+  Validate: { label: "Validate against corpus"; class: action }
+  Publish: { label: "Publish version\n(immutable snapshot)"; class: action }
+  ActivateVersion: { label: "Activate published version\n(sets retrieval pointer)"; class: action }
+  DraftStore: { label: "Mutable draft"; class: artifact }
+  VersionStore: { label: "Published versions"; class: artifact }
+}
+
+# ─── Search and answers ───────────────────────────────────────────────────────
+Retrieval: {
+  label: "Search and answer retrieval"
+  shape: rectangle
+  style: {
+    fill: "#f0fdf4"
+    stroke: "#16a34a"
+    stroke-width: 2
+    border-radius: 8
+  }
+
+  ToolManifest: { label: "GET /v1/agent/tools\n(tool manifest)"; class: action }
+  SemanticSearch: { label: "GET /v1/agent/index/search\n(semantic node search)"; class: action }
+  AnswerProxy: { label: "POST /v1/agent/answers\n(structured answer)"; class: action }
+  SearchStore: { label: "Weaviate semantic index\n(active version)"; class: artifact }
+  ClientAnswers: { label: "Answer endpoint\n(UUID → patient mapping\nstays client-side)"; class: external }
+}
+
+# ─── Portal and control ───────────────────────────────────────────────────────
+Control: {
+  label: "Portal and project control"
+  shape: rectangle
+  style: {
+    fill: "#fff7ed"
+    stroke: "#ea580c"
+    stroke-width: 2
+    border-radius: 8
+  }
+
+  Login: { label: "Login (Logto / Google)"; class: action }
+  Workspace: { label: "View workspace\n(project cards + health)"; class: action }
+  ProjectView: { label: "Open project summary\n(status, batches, runtime)"; class: action }
+  LaunchWorkbench: { label: "Launch workbench\n(full-screen handoff)"; class: action }
+  RuntimeHealth: { label: "Runtime health probe\nGET /v1/projects/{id}/runtime"; class: action }
+}
+
+# @step step-01
+Actors.Engineer -> Ingestion.Submit: submit corpus batch
+Ingestion.Submit -> Ingestion.BatchStore: persist source artifacts
+Ingestion.Submit -> Ingestion.Extract: trigger extraction pipeline
+
+# @step step-02
+Ingestion.Extract -> Ingestion.RecordStore: store extracted records
+Ingestion.RecordStore -> Ingestion.BuildIndex: trigger index build
+Ingestion.BuildIndex -> Retrieval.SearchStore: populate semantic index
+
+# @step step-03
+Actors.Operator -> Control.Login: authenticate
+Control.Login -> Control.Workspace: view all projects
+Control.Workspace -> Control.ProjectView: drill into project
+Control.ProjectView -> Control.RuntimeHealth: probe runtime health
+Control.ProjectView -> Control.LaunchWorkbench: launch workbench
+
+# @step step-04
+Control.LaunchWorkbench -> Authoring.OpenWorkbench: route to dedicated runtime
+Actors.Curator -> Authoring.OpenWorkbench: open workbench
+Authoring.OpenWorkbench -> Authoring.EditDraft: edit taxonomy draft
+Authoring.EditDraft -> Authoring.DraftStore: save draft state
+Authoring.EditDraft -> Authoring.Validate: validate against corpus
+
+# @step step-05
+Authoring.Validate -> Authoring.Publish: approve and publish
+Authoring.Publish -> Authoring.VersionStore: create immutable version snapshot
+Authoring.VersionStore -> Authoring.ActivateVersion: activate version pointer
+Authoring.ActivateVersion -> Retrieval.SearchStore: rebuild index for active version
+
+# @step step-06
+Actors.Agent -> Retrieval.ToolManifest: discover available tools
+Actors.Agent -> Retrieval.SemanticSearch: semantic node search
+Retrieval.SemanticSearch -> Retrieval.SearchStore: query active version index
+Retrieval.SearchStore -> Retrieval.AnswerProxy: return matched nodes
+Retrieval.AnswerProxy -> Retrieval.ClientAnswers: proxy structured answer to client
