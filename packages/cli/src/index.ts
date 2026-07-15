@@ -37,9 +37,13 @@ graph
       const index = await runInspect(d2file);
       if (opts.json) console.log(JSON.stringify(index, null, 2));
       else {
+        // Multi-line D2 labels ("a\nb") would wrap one entry across terminal lines;
+        // flatten them in pretty mode only (--json keeps the raw label).
+        const oneLine = (label: string) => label.replace(/\n/g, " / ");
         for (const n of index.nodes)
-          console.log(`node ${n.id}${n.classes.length ? `  [${n.classes.join(", ")}]` : ""}  "${n.label}"`);
-        for (const e of index.edges) console.log(`edge ${e.source} -> ${e.target}${e.label ? `  "${e.label}"` : ""}`);
+          console.log(`node ${n.id}${n.classes.length ? `  [${n.classes.join(", ")}]` : ""}  "${oneLine(n.label)}"`);
+        for (const e of index.edges)
+          console.log(`edge ${e.source} -> ${e.target}${e.label ? `  "${oneLine(e.label)}"` : ""}`);
       }
     } catch (e) {
       console.error(`fatal: ${e instanceof Error ? e.message : String(e)}`);

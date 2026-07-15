@@ -105,6 +105,20 @@ describe("bin smoke test", () => {
     expect(stdout).toContain("✓ valid");
   }, 30_000);
 
+  it("prints multi-line D2 labels on a single line in pretty mode", async () => {
+    if (!existsSync(distIndex)) return; // skip-if-no-dist
+    const multilineD2 = resolve(fixtures, "multiline.d2");
+    const { stdout } = await execFileAsync("node", [distIndex, "graph", "inspect", multilineD2]);
+    // Node label "Access Control\n(service authorization)" must be flattened to " / "
+    expect(stdout).toContain('node ac  "Access Control / (service authorization)"');
+    // Edge label "grants\naccess" likewise
+    expect(stdout).toContain('edge ac -> gw  "grants / access"');
+    // No entry may span multiple terminal lines: every line starts with node/edge
+    for (const line of stdout.split("\n").filter((l) => l.length > 0)) {
+      expect(line).toMatch(/^(node|edge) /);
+    }
+  }, 30_000);
+
   it("does not clip stdout on large `graph inspect` output (vLLM example)", async () => {
     if (!existsSync(distIndex)) return; // skip-if-no-dist
     const vllmD2 = resolve(cliPackageDir, "../../examples/vLLM/deployment.d2");
