@@ -37,6 +37,10 @@
 }
 .ds-popover {
   position: absolute;
+  /* PopoverLayer positions the card using CARD_WIDTH (260) as its full width, including when
+     it flips to the target's left; border-box keeps the rendered width equal to that so
+     padding/border don't push a left-flipped card back over its target node. */
+  box-sizing: border-box;
   pointer-events: auto;
   background: var(--ds-popover-bg, rgba(11, 18, 32, 0.95));
   color: var(--ds-popover-fg, #e8f0ff);
@@ -76,7 +80,7 @@
   margin-top: 12px;
 }
 .ds-tooltip {
-  position: fixed;
+  position: absolute;
   max-width: 320px;
   background: rgba(11, 18, 32, 0.95);
   color: #e8f0ff;

@@ -38,6 +38,53 @@ export function fitViewBox(bounds: Rect, containerAspect: number, padFraction = 
   return { x, y, width, height };
 }
 
+/**
+ * The inner→outer coordinate transform introduced by D2's nested-SVG output. D2 wraps the
+ * laid-out diagram in an inner `<svg class="d2-svg" viewBox="minX minY W H" width height>`,
+ * so a node's index geometry — expressed in that inner viewBox's *content* space — actually
+ * renders at `(geom - min) * (size / viewBoxSize)` in the OUTER svg's user space, which is
+ * the space our camera viewBox and diagramToScreen operate in. D2's default `min` is a
+ * negative pad (e.g. -89), so ignoring this transform offsets every camera fit and popover
+ * by that pad — the up-and-left popover/camera drift Task 17 exists to eliminate.
+ */
+export interface ContentTransform {
+  tx: number;
+  ty: number;
+  sx: number;
+  sy: number;
+}
+
+export const IDENTITY_CONTENT_TRANSFORM: ContentTransform = { tx: 0, ty: 0, sx: 1, sy: 1 };
+
+/** Parse an SVG length attribute, but only when it is a plain number (not "100%", "10px", …). */
+const numericAttr = (v: string | null): number => (v && /^-?[\d.]+$/.test(v.trim()) ? parseFloat(v) : NaN);
+
+/**
+ * Derives the inner→outer ContentTransform by reading the nested d2 `<svg>` inside `outerSvg`.
+ * Returns identity when there is no nested svg / viewBox (e.g. an unexpected structure), so
+ * callers degrade to the un-offset behavior rather than producing NaN positions. When the
+ * inner svg's width/height attributes aren't plain numbers, the scale falls back to 1 (D2
+ * always emits width == viewBox width, i.e. a pure translate by the viewBox min).
+ */
+export function readContentTransform(outerSvg: SVGSVGElement): ContentTransform {
+  const inner = outerSvg.querySelector("svg");
+  const vb = inner?.getAttribute("viewBox");
+  if (!inner || !vb) return IDENTITY_CONTENT_TRANSFORM;
+  const [minX, minY, vbW, vbH] = vb.trim().split(/\s+/).map(Number);
+  if (![minX, minY, vbW, vbH].every(Number.isFinite) || !vbW || !vbH) return IDENTITY_CONTENT_TRANSFORM;
+  const w = numericAttr(inner.getAttribute("width"));
+  const h = numericAttr(inner.getAttribute("height"));
+  const sx = Number.isFinite(w) ? w / vbW : 1;
+  const sy = Number.isFinite(h) ? h / vbH : 1;
+  // `|| 0` normalizes the -0 that -minX*sx yields when minX is 0, keeping equality clean.
+  return { tx: -minX * sx || 0, ty: -minY * sy || 0, sx, sy };
+}
+
+/** Maps a rect from D2's inner content space into the outer svg user space via `t`. */
+export function applyContentTransform(r: Rect, t: ContentTransform): Rect {
+  return { x: r.x * t.sx + t.tx, y: r.y * t.sy + t.ty, width: r.width * t.sx, height: r.height * t.sy };
+}
+
 /** Componentwise linear interpolation between two rects at t in [0, 1]. */
 export function interpolateRect(a: Rect, b: Rect, t: number): Rect {
   const lerp = (p: number, q: number) => p + (q - p) * t;

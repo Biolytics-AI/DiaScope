@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fitViewBox, interpolateRect, easeInOut, diagramToScreen, animateViewBox } from "../src/camera.js";
+import {
+  fitViewBox,
+  interpolateRect,
+  easeInOut,
+  diagramToScreen,
+  animateViewBox,
+  readContentTransform,
+  applyContentTransform,
+  IDENTITY_CONTENT_TRANSFORM,
+} from "../src/camera.js";
+
+const SVG_NS = "http://www.w3.org/2000/svg";
 
 describe("fitViewBox", () => {
   it("pads and letterboxes to aspect", () => {
@@ -22,6 +33,59 @@ describe("fitViewBox", () => {
     expect(Number.isNaN(vb.y)).toBe(false);
     expect(Number.isNaN(vb.width)).toBe(false);
     expect(Number.isNaN(vb.height)).toBe(false);
+  });
+});
+
+describe("content transform (D2 nested-svg inner→outer mapping)", () => {
+  function outerWithInner(viewBox: string | null, width?: string, height?: string) {
+    const outer = document.createElementNS(SVG_NS, "svg") as SVGSVGElement;
+    const inner = document.createElementNS(SVG_NS, "svg");
+    if (viewBox !== null) inner.setAttribute("viewBox", viewBox);
+    if (width !== undefined) inner.setAttribute("width", width);
+    if (height !== undefined) inner.setAttribute("height", height);
+    outer.appendChild(inner);
+    return outer;
+  }
+
+  it("derives a pure translate from D2's negative-pad viewBox (width == viewBox width)", () => {
+    // The real regression: D2 wraps content in <svg viewBox="-89 -89 8441 1307" width=8441 height=1307>,
+    // so inner geometry renders at (geom + 89) in the outer svg space the camera viewBox uses.
+    const t = readContentTransform(outerWithInner("-89 -89 8441 1307", "8441", "1307"));
+    expect(t).toEqual({ tx: 89, ty: 89, sx: 1, sy: 1 });
+    // A node at inner (2694, 382) maps to outer (2783, 471).
+    expect(applyContentTransform({ x: 2694, y: 382, width: 180, height: 44 }, t)).toEqual({
+      x: 2783,
+      y: 471,
+      width: 180,
+      height: 44,
+    });
+  });
+
+  it("includes scale when the inner svg width differs from its viewBox width", () => {
+    const t = readContentTransform(outerWithInner("0 0 100 50", "200", "100"));
+    expect(t).toEqual({ tx: 0, ty: 0, sx: 2, sy: 2 });
+    expect(applyContentTransform({ x: 10, y: 5, width: 4, height: 2 }, t)).toEqual({
+      x: 20,
+      y: 10,
+      width: 8,
+      height: 4,
+    });
+  });
+
+  it("falls back to scale 1 when width/height are non-numeric (e.g. percentages)", () => {
+    const t = readContentTransform(outerWithInner("-10 -20 100 50", "100%", "100%"));
+    expect(t).toEqual({ tx: 10, ty: 20, sx: 1, sy: 1 });
+  });
+
+  it("returns identity when there is no nested svg or viewBox", () => {
+    const lone = document.createElementNS(SVG_NS, "svg") as SVGSVGElement;
+    expect(readContentTransform(lone)).toEqual(IDENTITY_CONTENT_TRANSFORM);
+    expect(readContentTransform(outerWithInner(null))).toEqual(IDENTITY_CONTENT_TRANSFORM);
+  });
+
+  it("applyContentTransform with identity is a no-op", () => {
+    const r = { x: 3, y: 4, width: 5, height: 6 };
+    expect(applyContentTransform(r, IDENTITY_CONTENT_TRANSFORM)).toEqual(r);
   });
 });
 

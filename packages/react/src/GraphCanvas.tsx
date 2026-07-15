@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GraphIndex, SceneState } from "@diascope/core";
 import { SvgGraphBinding } from "@diascope/d2";
 import { applyStateToSvg } from "./state-classes.js";
-import { animateViewBox, fitViewBox } from "./camera.js";
+import { animateViewBox, fitViewBox, readContentTransform, applyContentTransform } from "./camera.js";
 import { runTraceAnimations, clearTraceStyles } from "./trace.js";
 
 /**
@@ -22,8 +22,11 @@ export function fitCameraToState(
 ): (() => void) | null {
   const bounds = binding.bounds(state.cameraFit);
   if (!bounds) return null;
+  // binding.bounds is in D2's inner content space; the viewBox we set lives in the outer svg
+  // user space. Map it across so the camera frames the nodes where they actually render.
+  const outerBounds = applyContentTransform(bounds, readContentTransform(svgEl));
   const aspect = host.clientWidth && host.clientHeight ? host.clientWidth / host.clientHeight : 16 / 9;
-  return animateViewBox(svgEl, fitViewBox(bounds, aspect), ms);
+  return animateViewBox(svgEl, fitViewBox(outerBounds, aspect), ms);
 }
 
 export interface GraphCanvasProps {

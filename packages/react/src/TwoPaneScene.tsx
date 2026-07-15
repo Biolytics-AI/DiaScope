@@ -6,7 +6,14 @@ import { GraphCanvas } from "./GraphCanvas.js";
 import { PopoverLayer } from "./PopoverLayer.js";
 import { NarrativePane } from "./NarrativePane.js";
 import { installLayoutDebug } from "./debug.js";
-import { fitViewBox, type ViewBox } from "./camera.js";
+import {
+  fitViewBox,
+  readContentTransform,
+  applyContentTransform,
+  IDENTITY_CONTENT_TRANSFORM,
+  type ViewBox,
+  type ContentTransform,
+} from "./camera.js";
 
 export interface TwoPaneSceneProps {
   svg: string;
@@ -27,6 +34,7 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
   const [binding, setBinding] = useState<SvgGraphBinding | null>(null);
+  const [contentTransform, setContentTransform] = useState<ContentTransform>(IDENTITY_CONTENT_TRANSFORM);
   const [drawer, setDrawer] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null);
@@ -47,16 +55,22 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
   }, [scene]);
 
   // Track the canvas wrapper's pixel size so PopoverLayer can convert diagram-space bounds
-  // to screen coordinates. Under jsdom (unit tests) getBoundingClientRect always returns an
-  // all-zero rect; we still record that zero-size object (rather than null) so popovers and
-  // the viewBox still render deterministically in tests — only their pixel *position* is
-  // meaningless there, which Task 17's Playwright pass verifies against a real browser.
+  // to screen coordinates. We use offsetWidth/offsetHeight (the UNTRANSFORMED layout size)
+  // rather than getBoundingClientRect (which returns TRANSFORMED sizes): inside reveal.js the
+  // deck is CSS-transform-scaled, but the popover's absolute left/top live in the wrap's
+  // untransformed local coordinate system, so positions must be computed in that same space
+  // and then scaled along with the wrap. GraphCanvas's camera aspect already uses
+  // clientWidth/clientHeight (also untransformed), so the two stay consistent.
+  //
+  // Under jsdom (unit tests) offsetWidth/offsetHeight are 0; we still record that zero-size
+  // object (rather than null) so popovers and the viewBox still render deterministically in
+  // tests — only their pixel *position* is meaningless there, which Task 17's Playwright pass
+  // verifies against a real browser.
   useEffect(() => {
     const el = canvasWrapRef.current;
     if (!el) return;
     const measure = () => {
-      const b = el.getBoundingClientRect();
-      setContainerSize({ width: b.width, height: b.height });
+      setContainerSize({ width: el.offsetWidth, height: el.offsetHeight });
     };
     measure();
     if (typeof ResizeObserver !== "undefined") {
@@ -70,11 +84,15 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
     if (!binding || !containerSize || !state) return null;
     const bounds = binding.bounds(state.cameraFit);
     if (!bounds) return null;
+    // Map from D2's inner content space into the outer svg user space (same transform
+    // GraphCanvas applies when it sets the actual viewBox), so this viewBox — which
+    // PopoverLayer uses to place cards — matches where the nodes really render.
+    const outerBounds = applyContentTransform(bounds, contentTransform);
     // Fall back to a 16:9 aspect (matches GraphCanvas's own fallback) when the container
     // hasn't been measured with real pixels yet, so this never divides by zero / produces NaN.
     const aspect = containerSize.width && containerSize.height ? containerSize.width / containerSize.height : 16 / 9;
-    return fitViewBox(bounds, aspect);
-  }, [binding, containerSize, state]);
+    return fitViewBox(outerBounds, aspect);
+  }, [binding, containerSize, state, contentTransform]);
 
   const onNodeClick = useCallback(
     (id: string) => {
@@ -92,7 +110,23 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
       const edge = index.edges.find(e => e.id === id);
       const tips = scene?.annotations?.edges ?? {};
       const text = (edge?.label && tips[edge.label]) || (edge && tips[`${edge.source}->${edge.target}`]) || null;
-      setTooltip(text && edge ? { text, x: ev.clientX, y: ev.clientY } : null);
+      if (!text || !edge) {
+        setTooltip(null);
+        return;
+      }
+      // Convert viewport (client) coordinates to the canvas wrap's UNTRANSFORMED local space.
+      // The tooltip is positioned absolutely inside that wrap, which reveal.js transform-scales;
+      // position:fixed with raw client coords would resolve against the transformed ancestor's
+      // box (a transform creates a containing block for fixed descendants), not the viewport,
+      // and drift. Dividing by the wrap's scale (rect.width / offsetWidth) undoes the transform.
+      const wrap = canvasWrapRef.current;
+      if (!wrap) {
+        setTooltip({ text, x: ev.clientX, y: ev.clientY });
+        return;
+      }
+      const r = wrap.getBoundingClientRect();
+      const scale = wrap.offsetWidth ? r.width / wrap.offsetWidth : 1;
+      setTooltip({ text, x: (ev.clientX - r.left) / scale, y: (ev.clientY - r.top) / scale });
     },
     [scene, index]
   );
@@ -117,9 +151,18 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
           state={state}
           onNodeClick={onNodeClick}
           onEdgeHover={hasEdgeTips ? onEdgeHover : undefined}
-          onBindingReady={b => setBinding(b)}
+          onBindingReady={(b, el) => {
+            setBinding(b);
+            setContentTransform(readContentTransform(el));
+          }}
         />
-        <PopoverLayer popovers={state.popovers} binding={binding} viewBox={viewBox} container={containerSize} />
+        <PopoverLayer
+          popovers={state.popovers}
+          binding={binding}
+          viewBox={viewBox}
+          container={containerSize}
+          transform={contentTransform}
+        />
         {tooltip && (
           <div
             data-diascope-part="tooltip"
