@@ -252,6 +252,17 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
   // path is untouched. See src/explore.ts.
   const renderedState = applyExploreOverlay(state, exploreState, index);
 
+  // The narration pane must describe the SAME view the graph is showing. `state` (and thus the
+  // diagram) already resolves against `activeViewId` via resolveStepInView; mirror that here so
+  // the pane's title/body/pills follow the active lens instead of staying stuck on the default
+  // view's steps. For the default lens `activeView.steps === scene.steps`, so this is a no-op.
+  // stepIndex is clamped to the active view's step count — as resolveStepInView clamps it for
+  // the graph — so a transient index left over from a longer view can't index past a shorter
+  // view's steps for one render.
+  const activeView = views.find(v => v.id === activeViewId) ?? views[0];
+  const paneScene = { ...scene, steps: activeView.steps };
+  const paneStepIndex = Math.min(Math.max(stepIndex, 0), activeView.steps.length - 1);
+
   return (
     <div ref={rootRef} data-diascope-part="scene" className="ds-scene" data-diascope-layout={layout}>
       <div className="ds-scene-inner">
@@ -339,8 +350,8 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
         )}
       </div>
       <NarrativePane
-        scene={scene}
-        stepIndex={stepIndex}
+        scene={paneScene}
+        stepIndex={paneStepIndex}
         onGoto={onGoto}
         views={views.map(v => ({ id: v.id, label: v.label }))}
         activeViewId={activeViewId}

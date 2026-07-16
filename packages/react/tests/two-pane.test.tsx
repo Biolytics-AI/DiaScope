@@ -51,6 +51,25 @@ const docWithViews: NarrativeDocument = {
   ],
 };
 
+// A view whose step carries its OWN title/body, distinct from the base scene's steps, so a
+// test can tell whether the narration pane follows the active lens or is stuck on the default
+// view's text.
+const docWithViewText: NarrativeDocument = {
+  ...doc,
+  scenes: [
+    {
+      ...doc.scenes[0],
+      views: [
+        {
+          id: "focused",
+          label: "Focused",
+          steps: [{ id: "f0", focus: ["request"], text: { title: "Focused step one", body: "Body for focused view." } }],
+        },
+      ],
+    },
+  ],
+};
+
 describe("TwoPaneScene / useNarrative / debug layout", () => {
   let svg: string;
   let index: GraphIndex;
@@ -445,6 +464,26 @@ describe("TwoPaneScene / useNarrative / debug layout", () => {
     expect(tabs).not.toBeNull();
     fireEvent.click(getByText("Focused"));
     expect(onGoto).toHaveBeenCalledWith(0);
+  });
+
+  // Regression: switching lenses re-focuses the graph (via resolveStepInView), and the
+  // narration pane must follow the SAME active view — otherwise the diagram shows one view's
+  // step while the title/body describe a different view's step (a graph/pane desync surfaced
+  // by the multi-step audience-lens fixture).
+  it("narration pane text follows the active view, not the default view", () => {
+    const { container, getByText } = render(
+      <TwoPaneScene svg={svg} index={index} doc={docWithViewText} sceneId="main" stepIndex={0} onGoto={vi.fn()} />
+    );
+    const title = () => container.querySelector(".ds-title")?.textContent;
+    const body = () => container.querySelector(".ds-body")?.textContent;
+
+    // Default view active: the base scene's own step-0 text.
+    expect(title()).toBe("All systems");
+
+    // Switch to the "Focused" view (resets to its step 0): pane must now describe THAT view.
+    fireEvent.click(getByText("Focused"));
+    expect(title()).toBe("Focused step one");
+    expect(body()).toBe("Body for focused view.");
   });
 
   it("a scene with no views renders no tab row (regression)", () => {

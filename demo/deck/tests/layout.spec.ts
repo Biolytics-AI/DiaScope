@@ -440,6 +440,58 @@ test("audience lenses: tab row switches views and resets to step 0, no console e
   expect(errors, `console/page errors during lens switch:\n${errors.join("\n")}`).toEqual([]);
 });
 
+test("audience lenses (multi-step views): a lens switch shows the new view's step 0, and the narration follows the active lens", async ({ page }) => {
+  // Bound to its OWN story (multi-step-lenses), independent of the STORY env var — like the
+  // lens-test and chapter tests above. multi-step-lenses is the only fixture whose default AND
+  // alt views BOTH have multiple steps, so it is the only one that can prove a lens switch
+  // (a) resets to the NEW view's step 0 rather than leaking a stale mid-narrative step index,
+  // and (b) repaints the narration pane with the ACTIVE view's step text instead of the default
+  // view's. The single-step lens-test fixture can exercise neither.
+  const errors = collectConsoleErrors(page);
+  await page.goto("/?story=multi-step-lenses");
+  await page.waitForFunction(
+    () => !!(window as any).deck && !!document.querySelector(".diascope-scene svg"),
+    null,
+    { timeout: 60_000 }
+  );
+  await page.evaluate(() => (window as any).deck.slide(1, 0));
+  await page.waitForSelector('[data-diascope-part="canvas"] svg', { timeout: 30_000 });
+  await settle(page);
+
+  const present = () => page.locator(".reveal .slides section.present");
+  const title = () => present().locator(".ds-title");
+  const body = () => present().locator(".ds-body");
+  const altTab = () => present().locator('[data-diascope-part="lens-tabs"] button').filter({ hasText: "Alt" });
+  const activePill = () => present().locator('[data-diascope-part="pill-row"] .ds-pill-active');
+
+  // Default view, step 0.
+  await expect(title()).toHaveText("DEFAULT-STEP-1");
+
+  // Advance the default view to its LAST step, so a naive lens switch would have a stale
+  // step-2 index to leak into the alt view.
+  await page.keyboard.press("ArrowRight");
+  await settle(page);
+  await page.keyboard.press("ArrowRight");
+  await settle(page);
+  await expect(title()).toHaveText("DEFAULT-STEP-3");
+
+  // Switch to the multi-step "Alt" view. It must reset to ITS step 0 (pill "01") and the pane
+  // must describe the alt view — not the default view's text, and not the stale step-2 index.
+  await altTab().click();
+  await settle(page);
+  await expect(altTab()).toHaveAttribute("aria-pressed", "true");
+  await expect(title()).toHaveText("ALT-STEP-1");
+  await expect(body()).toContainText("Alt view, step 1");
+  await expect(activePill()).toHaveText("01");
+
+  // The alt view is itself navigable across its own multiple steps.
+  await page.keyboard.press("ArrowRight");
+  await settle(page);
+  await expect(title()).toHaveText("ALT-STEP-2");
+
+  expect(errors, `console errors during multi-step lens switch:\n${errors.join("\n")}`).toEqual([]);
+});
+
 test("explore mode auto-exits when the deck advances a step (ArrowRight)", async ({ page }, testInfo) => {
   const errors = collectConsoleErrors(page);
   await waitForDeck(page);
