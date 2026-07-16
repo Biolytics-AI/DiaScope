@@ -373,7 +373,13 @@
   border-color: rgba(6, 225, 236, 0.6);
 }
 .ds-explore-toggle[aria-pressed="true"] {
-  background: rgba(6, 225, 236, 0.14);
+  /* The active tint must stay legible over ANY diagram content the toggle floats above:
+     drilling into a light-filled container puts the button over a near-white backdrop, and a
+     bare rgba(...,0.14) fill let that bleed through until the white label lost contrast. Layer
+     the cyan tint over the SOLID surface so the button is opaque (dark teal) on every backdrop
+     while still reading as accent-active via the tint + cyan border. */
+  background: linear-gradient(0deg, rgba(6, 225, 236, 0.18), rgba(6, 225, 236, 0.18)),
+    var(--ds-surface-solid);
   border-color: var(--ds-accent);
   color: #fff;
 }
