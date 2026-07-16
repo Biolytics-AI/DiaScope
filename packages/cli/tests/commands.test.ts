@@ -93,17 +93,34 @@ describe("runResolve", () => {
     expect(error!.message).toContain("Unknown scene");
   }, 30_000);
 
-  // NOTE: pre-audience-lenses, runResolve called resolveStep directly, which threw on an
-  // out-of-range stepIndex. runResolve now delegates to @diascope/core's resolveStepInView
-  // (Task 5 of the audience-lenses plan), which deliberately CLAMPS stepIndex instead of
-  // throwing (see packages/core/src/views.ts + tests/views.test.ts "clamps an out-of-range
-  // stepIndex..." — clamping lets a live lens-switching UI survive a transient stale index).
-  // That contract change is intentional and applies uniformly to every resolveStepInView
-  // caller, CLI included, so this test now asserts the clamp instead of a throw.
-  it("clamps an out-of-range step to the scene's last step instead of throwing", async () => {
-    const { state } = await runResolve(validYaml, "main", 99);
-    const lastStep = await runResolve(validYaml, "main", 1); // "main" has exactly 2 steps (indices 0-1)
-    expect(state).toEqual(lastStep.state);
+  // NOTE: @diascope/core's resolveStepInView (Task 1 of the audience-lenses plan) deliberately
+  // CLAMPS an out-of-range stepIndex instead of throwing — the right contract for the live
+  // renderer, which can hold a transient/stale stepIndex prop during async lens-switching and
+  // must never crash. But runResolve is a deliberate one-shot CLI preview tool: an agent
+  // explicitly passes --step N, and silently clamping a typo'd index (e.g. --step 20 meaning
+  // --step 2) would hand back a plausible-looking but wrong SceneState with no signal anything
+  // was off. So runResolve validates stepIndex against the resolved view's step count itself
+  // and throws, preserving the pre-existing resolveStep out-of-range contract at the CLI layer.
+  it("throws an actionable error for an out-of-range step", async () => {
+    let error: Error | undefined;
+    try {
+      await runResolve(validYaml, "main", 99);
+    } catch (e) {
+      error = e as Error;
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect(error!.message).toBe('Step 99 out of range for view "default" in scene "main" (2 steps)');
+  }, 30_000);
+
+  it("throws an actionable error for an out-of-range step on an explicit --view", async () => {
+    let error: Error | undefined;
+    try {
+      await runResolve(viewsYaml, "main", 99, "legal");
+    } catch (e) {
+      error = e as Error;
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect(error!.message).toBe('Step 99 out of range for view "legal" in scene "main" (1 steps)');
   }, 30_000);
   it("surfaces readable d2 compile errors (not raw JSON) when the graph is malformed", async () => {
     const err: Error = await runResolve(malformedGraphYaml, "main", 0).then(
