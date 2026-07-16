@@ -8,3 +8,4 @@ export * from "./NarrativePane.js";
 export * from "./TwoPaneScene.js";
 export * from "./useNarrative.js";
 export * from "./debug.js";
+export * from "./explore.js";
