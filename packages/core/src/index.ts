@@ -6,3 +6,4 @@ export * from "./validate.js";
 export * from "./capabilities.js";
 export * from "./serialize.js";
 export * from "./legacy.js";
+export * from "./views.js";

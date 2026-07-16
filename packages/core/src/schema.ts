@@ -35,6 +35,12 @@ export const StepSchema = z.strictObject({
   collapse: z.string().optional(),
 });
 
+export const ViewSchema = z.strictObject({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  steps: z.array(StepSchema).min(1),
+});
+
 export const SceneSchema = z.strictObject({
   id: z.string().min(1),
   layout: z.literal("two-pane").default("two-pane"),
@@ -44,6 +50,7 @@ export const SceneSchema = z.strictObject({
     edges: z.record(z.string(), z.string()).optional(),
   }).optional(),
   steps: z.array(StepSchema).min(1),
+  views: z.array(ViewSchema).min(1).optional(),
 });
 
 export const NarrativeDocumentSchema = z.strictObject({
@@ -53,6 +60,7 @@ export const NarrativeDocumentSchema = z.strictObject({
 });
 
 export type Step = z.infer<typeof StepSchema>;
+export type View = z.infer<typeof ViewSchema>;
 export type Scene = z.infer<typeof SceneSchema>;
 export type NarrativeDocument = z.infer<typeof NarrativeDocumentSchema>;
 export type NarrativeDocumentInput = z.input<typeof NarrativeDocumentSchema>;
