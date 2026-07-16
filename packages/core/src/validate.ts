@@ -154,20 +154,21 @@ export function validateDocument(doc: NarrativeDocument, index: GraphIndex): Val
     });
   }
 
-  for (let si = 0; si < doc.scenes.length; si++) {
-    const scene = doc.scenes[si];
-    const scenePath = `scenes[${si}]`;
-
-    for (let ti = 0; ti < scene.steps.length; ti++) {
-      const step = scene.steps[ti];
-      const stepPath = `${scenePath}.steps[${ti}]`;
+  // Validates one step array (a scene's own `steps`, or an authored view's `steps`) against
+  // `stepsPath`, the path prefix under which per-step issues are reported (e.g.
+  // "scenes[0].steps" or "scenes[0].views[1].steps"). Extracted so both the scene's default
+  // step array and every authored view's step array run through identical validation logic.
+  function validateSteps(steps: Step[], stepsPath: string): void {
+    for (let ti = 0; ti < steps.length; ti++) {
+      const step = steps[ti];
+      const stepPath = `${stepsPath}[${ti}]`;
 
       // Reference/empty checks for show/hide happen here (once per step, exact paths);
       // the visibility itself comes from the same fold resolveStep uses, with a tolerant
       // resolver so already-reported unknown refs don't abort the fold.
       resolveSelectorVerb(step.show, `${stepPath}.show`);
       resolveSelectorVerb(step.hide, `${stepPath}.hide`);
-      const visible = foldVisibility(scene.steps, ti, index, tolerantResolve);
+      const visible = foldVisibility(steps, ti, index, tolerantResolve);
 
       const focusIds = resolveSelectorVerb(step.focus, `${stepPath}.focus`);
       if (focusIds.length > 0 && !focusIds.some(id => visible.has(id))) {
@@ -206,6 +207,19 @@ export function validateDocument(doc: NarrativeDocument, index: GraphIndex): Val
         }
       }
     }
+  }
+
+  for (let si = 0; si < doc.scenes.length; si++) {
+    const scene = doc.scenes[si];
+    const scenePath = `scenes[${si}]`;
+
+    // Default view keeps today's scenes[i].steps[...] path shape for backward compatibility;
+    // authored views validate independently with scenes[i].views[j].steps[...] paths (j indexes
+    // scene.views directly, not effectiveSteps' prepended list, so it matches what the author wrote).
+    validateSteps(scene.steps, `${scenePath}.steps`);
+    (scene.views ?? []).forEach((view, vi) => {
+      validateSteps(view.steps, `${scenePath}.views[${vi}].steps`);
+    });
 
     // annotations.nodes keys must be real node ids. annotations.edges keys match by edge label
     // or "source->target" at render time, not node ids — they aren't validatable here, so skip.

@@ -202,6 +202,48 @@ describe("validateDocument", () => {
   });
 });
 
+describe("views", () => {
+  const docWithViews = {
+    version: 1 as const,
+    graph: { source: "g.d2" },
+    scenes: [
+      {
+        id: "main",
+        layout: "two-pane" as const,
+        steps: [{ id: "s0", camera: { fit: "all" as const } }],
+        views: [
+          { id: "legal", label: "Legal", steps: [{ id: "l0", focus: ["sys.apo"] }] }, // typo'd id
+          { id: "infra", label: "Infra", steps: [{ id: "i0", focus: ["sys.api"] }] }, // valid
+        ],
+      },
+    ],
+  };
+
+  it("validates every authored view's steps, with a scenes[i].views[j].steps[k] path for the bad one", () => {
+    const { errors } = validateDocument(docWithViews, index);
+    const err = errors.find(e => e.reason === "unknown-reference");
+    expect(err).toBeDefined();
+    // focus is a single-element array (["sys.apo"]), so per the existing per-element array
+    // resolution convention (see "reports one error per unknown selector array element" above)
+    // the path carries an [i] index suffix.
+    expect(err!.path).toBe("scenes[0].views[0].steps[0].focus[0]");
+  });
+
+  it("the default view's errors keep today's scenes[i].steps[k] path shape (backward compatible)", () => {
+    const withBadDefault = {
+      ...docWithViews,
+      scenes: [{ ...docWithViews.scenes[0], steps: [{ id: "s0", focus: ["nope"] }] }],
+    };
+    const { errors } = validateDocument(withBadDefault, index);
+    expect(errors.some(e => e.path === "scenes[0].steps[0].focus[0]")).toBe(true);
+  });
+
+  it("a document with no views validates identically to before this change", () => {
+    const plain = { version: 1 as const, graph: { source: "g.d2" }, scenes: [{ id: "main", layout: "two-pane" as const, steps: [{ id: "s0", camera: { fit: "all" as const } }] }] };
+    expect(validateDocument(plain, index)).toEqual({ errors: [], warnings: [] });
+  });
+});
+
 describe("foldVisibility", () => {
   const allIds = index.nodes.map(n => n.id).sort();
 
