@@ -15,7 +15,9 @@ function childrenOf(containerId: string, index: GraphIndex): string[] {
 
 function neighborsOf(nodeId: string, index: GraphIndex): { ids: string[]; edges: GraphEdge[] } {
   const edges = index.edges.filter(e => e.source === nodeId || e.target === nodeId);
-  const ids = edges.map(e => (e.source === nodeId ? e.target : e.source));
+  // Dedupe: parallel edges to the same neighbor (a documented D2 possibility, see
+  // selectors.ts/validate.ts) would otherwise list that neighbor more than once.
+  const ids = [...new Set(edges.map(e => (e.source === nodeId ? e.target : e.source)))];
   return { ids, edges };
 }
 
@@ -50,7 +52,7 @@ export function applyExploreOverlay(authored: SceneState, explore: ExploreState,
       highlighted,
       dimmed: allIds.filter(id => !highlighted.includes(id)),
       traced: edges,
-      cameraFit: highlighted,
+      cameraFit: [...highlighted],
     };
   }
 
@@ -67,7 +69,7 @@ export function applyExploreOverlay(authored: SceneState, explore: ExploreState,
     ...base,
     highlighted,
     dimmed: allIds.filter(id => !highlighted.includes(id)),
-    cameraFit: highlighted,
+    cameraFit: [...highlighted],
   };
 }
 
