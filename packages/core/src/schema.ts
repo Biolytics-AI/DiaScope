@@ -43,6 +43,7 @@ export const ViewSchema = z.strictObject({
 
 export const SceneSchema = z.strictObject({
   id: z.string().min(1),
+  chapter: z.string().min(1).optional(),
   layout: z.literal("two-pane").default("two-pane"),
   text: StepTextSchema.optional(),
   annotations: z.strictObject({

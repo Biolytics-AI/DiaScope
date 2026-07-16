@@ -29,6 +29,10 @@
             "type": "string",
             "minLength": 1
           },
+          "chapter": {
+            "type": "string",
+            "minLength": 1
+          },
           "layout": {
             "default": "two-pane",
             "type": "string",
