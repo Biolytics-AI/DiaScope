@@ -3,6 +3,7 @@ graph:
   source: ../../../examples/vLLM/deployment.d2
 scenes:
   - id: request-path
+    chapter: request-flow
     text: { title: "Compliant GPU Blueprint" }
     annotations:
       nodes:
@@ -34,6 +35,7 @@ scenes:
           title: "Inference inside the enclave"
           body: "Decrypted requests exist only inside the private network enclave."
   - id: audit-trail
+    chapter: request-flow
     text: { title: "Audit & evidence" }
     steps:
       - id: audit-overview
