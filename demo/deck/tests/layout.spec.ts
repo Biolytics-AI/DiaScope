@@ -10,6 +10,12 @@ interface Entry { part: string; id: string | null; target: string | null; rect: 
 const STORY = process.env.STORY; // Phase B parametrization
 const url = STORY ? `/?story=${STORY}` : "/";
 
+// Explore-mode Playwright screenshots go to the session scratchpad, never the repo (the
+// story-walk test above writes to ./screens which is git-ignored; these use an absolute path
+// so an explicit `git add tests/layout.spec.ts` can never sweep an image into a commit).
+const SHOTS =
+  "/private/tmp/claude-501/-Users-hugoevers-VScode-projects-DiaScope/cd177457-ae23-40d8-b416-07e6a2eb97b6/scratchpad/explore-shots";
+
 // --- Story-agnostic target resolution for the drawer test ------------------------------
 // The drawer test used to hardcode a vLLM-specific node id + fragment index, so it broke
 // for every Phase B story. Instead, read whatever document is actually active straight off
@@ -70,6 +76,12 @@ function slidePosition(sceneIndex: number): { h: number; v: number } {
 
 const layout = (page: Page): Promise<Entry[]> =>
   page.evaluate(() => (window as any).__diascopeDebug?.layout() ?? []);
+
+// Sorted ids of the currently-highlighted nodes, read straight off the live DOM via layout()
+// (applyStateToSvg stamps data-diascope-part="node-highlight"/data-diascope-id on exactly the
+// highlighted nodes). Used to prove explore-mode highlights don't linger past an exit.
+const highlightIds = (entries: Entry[]): string[] =>
+  entries.filter(e => e.part === "node-highlight" && e.id).map(e => e.id as string).sort();
 
 // The orientation the renderer chose for the on-screen scene (data-diascope-layout on the
 // .ds-scene root; see packages/react/src/TwoPaneScene.tsx). Read off the *visible* scene the
@@ -259,4 +271,152 @@ test("node drawer opens, passes invariants, and closes", async ({ page }, testIn
   expect(afterClose.some(e => e.part === "drawer"), "drawer did not close").toBe(false);
 
   expect(errors, `console errors during drawer test:\n${errors.join("\n")}`).toHaveLength(0);
+});
+
+// Clicks a graph-node locator (used for the explore-mode role=button nodes), falling back to a
+// raw mouse click at the node's center if the actionability click is blocked — mirrors the
+// resilience of clickNode above, but takes a Locator instead of a data-diascope-id (explore
+// mode leaves data-diascope-id off un-highlighted nodes, so we address them by role=button).
+async function clickExploreNode(page: Page, loc: ReturnType<Page["locator"]>) {
+  await loc.waitFor({ state: "visible", timeout: 10_000 });
+  try {
+    await loc.click({ timeout: 5000 });
+  } catch {
+    const box = await loc.boundingBox();
+    if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    else await loc.click({ force: true });
+  }
+}
+
+test("explore mode: toggle isolates/drills, suppresses annotations, breadcrumb stays in canvas, Escape restores", async ({ page }, testInfo) => {
+  const project = testInfo.project.name;
+  const errors = collectConsoleErrors(page);
+  await waitForDeck(page);
+
+  // Land on a step that authors node highlights so the exit spot-check compares a *non-empty*
+  // authored set (findDrawerTarget resolves the first scene/step that highlights an annotated
+  // node — the exact place a node is on-screen and highlighted). Fall back to scene 1's base
+  // step for a doc with no annotated nodes; the assertion still proves no explore highlight lingers.
+  const target = findDrawerTarget(loadActiveDoc());
+  if (target) {
+    const pos = slidePosition(target.sceneIndex);
+    const fragment = target.stepIndex > 0 ? target.stepIndex - 1 : undefined;
+    await page.evaluate(
+      (p: { h: number; v: number; f: number | undefined }) => (window as any).deck.slide(p.h, p.v, p.f),
+      { h: pos.h, v: pos.v, f: fragment }
+    );
+  } else {
+    await page.evaluate(() => (window as any).deck.slide(1, 0));
+  }
+  await settle(page);
+  const authoredHighlights = highlightIds(await layout(page));
+
+  // Capture the toggle ONCE with a name that matches BOTH label states: "Explore" and
+  // "Exploring · Exit". A /explore/i pattern would stop matching once the label becomes
+  // "Exploring" ("explor-i" ≠ "explor-e"), so /explor/i is used deliberately.
+  const toggle = page.getByRole("button", { name: /explor/i });
+  await expect(toggle).toHaveCount(1);
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+  await toggle.click();
+  await settle(page);
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await page.screenshot({ path: `${SHOTS}/${project}-01-explore-active.png` });
+
+  // Suppression proof: while exploring there must be NO popover, drawer, or tooltip anywhere in
+  // the live layout — this is the real-browser check for Task 3's tooltip/popover/drawer
+  // suppression (onEdgeHover early-returns and the popover/drawer JSX is gated on !active).
+  const exploreParts = (await layout(page)).map(e => e.part);
+  const leaked = exploreParts.filter(p => p === "popover" || p === "drawer" || p === "tooltip");
+  expect(leaked, `annotation parts leaked into explore view: ${leaked.join(", ")}`).toEqual([]);
+
+  // Click the first clickable graph node. In explore mode every node is interactive
+  // (interactiveNodeIds = all node ids -> role=button + tabindex on each), while data-diascope-id
+  // is stamped only on *highlighted* nodes (empty in the neutral pre-click view) — so nodes are
+  // addressed by role=button, not [data-diascope-id]. Whichever the diagram resolves to (a
+  // container drills, a leaf isolates) is fine.
+  const node = page.locator('[data-diascope-part="canvas"] [role="button"]').first();
+  const clickedLabel = (await node.getAttribute("aria-label")) ?? "";
+  const clickedId = clickedLabel.replace(/^Details for /, "");
+  await clickExploreNode(page, node);
+  await settle(page);
+
+  // The neutral explore view (whole diagram visible, then isolate/drill) must still honour the
+  // scene's geometry invariants (canvas/pane non-overlap, stacked ordering, highlighted nodes
+  // inside the camera viewport).
+  await assertInvariants(page, `${project} explore/after-click`);
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  const afterClickHighlights = highlightIds(await layout(page));
+  expect(afterClickHighlights, "click produced no highlighted nodes").not.toHaveLength(0);
+  expect(afterClickHighlights, "clicked node is not among the highlighted set").toContain(clickedId);
+  await page.screenshot({ path: `${SHOTS}/${project}-02-after-click.png` });
+
+  // Container click -> drill -> breadcrumb; leaf click -> isolate (no breadcrumb). Only assert
+  // the breadcrumb block when it actually rendered.
+  const crumbNav = page.locator('[data-diascope-part="drill-breadcrumb"]');
+  if ((await crumbNav.count()) > 0) {
+    const entries = visibleEntries(await layout(page));
+    const canvas = entries.find(e => e.part === "canvas")!;
+    const pane = entries.find(e => e.part === "pane")!;
+    const bc = entries.find(e => e.part === "drill-breadcrumb");
+    expect(bc, "breadcrumb rendered but has no on-screen geometry").toBeTruthy();
+    // Stays within the canvas frame and never overlaps the narration pane.
+    expect.soft(contains(canvas.rect, bc!.rect, 4), "breadcrumb escapes the canvas frame").toBe(true);
+    expect.soft(overlaps(bc!.rect, pane.rect), "breadcrumb overlaps the narration pane").toBe(false);
+    await page.screenshot({ path: `${SHOTS}/${project}-03-breadcrumb.png` });
+
+    // Clicking the last crumb re-drills the currently-drilled container (= the node we clicked)
+    // and must re-highlight it: proves the crumb button's onClick -> setExploreState(drill) path
+    // works live, without exiting explore mode.
+    const lastCrumb = crumbNav.locator("button").last();
+    await lastCrumb.click();
+    await settle(page);
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(highlightIds(await layout(page)), "crumb click did not re-highlight the container").toContain(clickedId);
+  }
+
+  // Escape exits explore mode and must restore the authored step exactly — no explore-only
+  // highlight may survive the exit.
+  await page.keyboard.press("Escape");
+  await settle(page);
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  expect(highlightIds(await layout(page)), "authored highlights not restored after Escape").toEqual(authoredHighlights);
+  await assertInvariants(page, `${project} explore/after-exit`);
+  await page.screenshot({ path: `${SHOTS}/${project}-04-after-exit.png` });
+
+  expect(errors, `console errors during explore test:\n${errors.join("\n")}`).toHaveLength(0);
+});
+
+test("explore mode auto-exits when the deck advances a step (ArrowRight)", async ({ page }, testInfo) => {
+  const errors = collectConsoleErrors(page);
+  await waitForDeck(page);
+
+  // Scene 1 (first real scene) has fragment steps, so ArrowRight advances a step WITHIN the
+  // same mounted scene — exactly what the stepIndex auto-exit effect keys off. Start at the
+  // scene's base step; assert a next step is actually available so the ArrowRight below is a
+  // real in-scene step change and not a slide jump.
+  await page.evaluate(() => (window as any).deck.slide(1, 0));
+  await settle(page);
+  const before = await deckState(page);
+  expect(before.fragments.next, "scene 1 has no next fragment — cannot prove in-scene auto-exit").toBe(true);
+
+  const toggle = page.getByRole("button", { name: /explor/i });
+  await toggle.click();
+  await settle(page);
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+
+  // Enter real explore state (isolate or drill) so there is something to auto-discard.
+  await clickExploreNode(page, page.locator('[data-diascope-part="canvas"] [role="button"]').first());
+  await settle(page);
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+
+  // ArrowRight is reveal.js's real forward key. The step changes and explore mode must snap off
+  // with no manual exit.
+  await page.keyboard.press("ArrowRight");
+  await settle(page);
+  const after = await deckState(page);
+  expect(after.indices.f, "ArrowRight did not advance a fragment (step did not change)").toBeGreaterThan(before.indices.f);
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+  expect(errors, `console errors during auto-exit test:\n${errors.join("\n")}`).toHaveLength(0);
 });
