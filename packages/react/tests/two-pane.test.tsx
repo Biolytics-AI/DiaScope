@@ -94,6 +94,26 @@ describe("TwoPaneScene / useNarrative / debug layout", () => {
     throw new Error("sys.api element not found in compiled svg");
   }
 
+  // Finds the exact bound SVG element for a given node id (the same element
+  // SvgGraphBinding.nodeElement/applyStateToSvg operate on), independent of whether it is
+  // currently highlighted. data-diascope-id is only stamped on a node once it's highlighted
+  // (see state-classes.ts), so a pre-click lookup for a not-yet-highlighted container/leaf
+  // must decode the base64 class token directly rather than querying that attribute.
+  function nodeGroupById(container: HTMLElement, id: string): Element {
+    const svgEl = container.querySelector("svg")!;
+    for (const el of svgEl.querySelectorAll("[class]")) {
+      const first = (el.getAttribute("class") ?? "").trim().split(/\s+/)[0];
+      let decoded: string | null = null;
+      try {
+        decoded = atob(first).replaceAll("-&gt;", "->").replaceAll("&lt;-", "<-");
+      } catch {
+        decoded = null;
+      }
+      if (decoded === id) return el;
+    }
+    throw new Error(`${id} element not found in compiled svg`);
+  }
+
   it("renders scene/canvas/pane/pill-row parts; pane shows step 0's title; two pills; pill 0 current", () => {
     const onGoto = vi.fn();
     const { container } = render(
@@ -322,6 +342,84 @@ describe("TwoPaneScene / useNarrative / debug layout", () => {
     // Not exploring, so the authored popover for step 1 still renders (renderedState is the
     // identity of the authored state when exploreState.active is false).
     expect(second.container.querySelector('[data-diascope-part="popover"]')).not.toBeNull();
+  });
+
+  // Task 3 adds the actual toggle button + drill breadcrumb UI that Task 2's exploreState/
+  // setExploreState plumbing was waiting to be driven by.
+  it("the explore toggle enters explore mode, closes any open drawer, and can be toggled off again", () => {
+    const onGoto = vi.fn();
+    const { container, getByRole } = render(
+      <TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={0} onGoto={onGoto} />
+    );
+
+    // Open the drawer first.
+    fireEvent.click(sysApiDescendant(container));
+    expect(container.querySelector('[data-diascope-part="drawer"]')).not.toBeNull();
+
+    const toggle = getByRole("button", { name: /explore/i });
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    // Entering explore mode closes the drawer that was left open (Task 2 review note).
+    expect(container.querySelector('[data-diascope-part="drawer"]')).toBeNull();
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("leaf click while exploring isolates instead of opening the drawer, even for an annotated node", () => {
+    const onGoto = vi.fn();
+    const { container, getByRole } = render(
+      <TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={0} onGoto={onGoto} />
+    );
+    fireEvent.click(getByRole("button", { name: /explore/i }));
+    // sysApiDescendant locates the bound element by decoding the svg class token directly, so
+    // it works whether or not "sys.api" is currently highlighted (unlike a data-diascope-id
+    // query, which is only stamped once a node becomes highlighted — see nodeGroupById above).
+    fireEvent.click(sysApiDescendant(container));
+    expect(container.querySelector('[data-diascope-part="drawer"]')).toBeNull();
+    const sysApiEl = container.querySelector('[data-diascope-id="sys.api"]');
+    expect(sysApiEl).not.toBeNull();
+    expect(sysApiEl!.getAttribute("class")).toContain("ds-highlight");
+  });
+
+  it("clicking a container while exploring drills into it and shows a breadcrumb", () => {
+    const onGoto = vi.fn();
+    const { container, getByRole } = render(
+      <TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={0} onGoto={onGoto} />
+    );
+    fireEvent.click(getByRole("button", { name: /explore/i }));
+    fireEvent.click(nodeGroupById(container, "sys"));
+    const breadcrumb = container.querySelector('[data-diascope-part="drill-breadcrumb"]');
+    expect(breadcrumb).toBeTruthy();
+    // "sys"'s label ("System", per the compiled D2 source) renders as the crumb text.
+    expect(breadcrumb!.textContent).toContain("System");
+  });
+
+  it("clicking the drilled container's own breadcrumb crumb re-targets to it", () => {
+    const onGoto = vi.fn();
+    const { container, getByRole } = render(
+      <TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={0} onGoto={onGoto} />
+    );
+    fireEvent.click(getByRole("button", { name: /explore/i }));
+    fireEvent.click(nodeGroupById(container, "sys"));
+    const crumb = container.querySelector('[data-diascope-part="drill-breadcrumb"] button')!;
+    fireEvent.click(crumb);
+    expect(container.querySelector('[data-diascope-id="sys"]')?.getAttribute("class")).toContain("ds-highlight");
+  });
+
+  it("a stepIndex change while exploring auto-exits explore mode", () => {
+    const onGoto = vi.fn();
+    const { getByRole, rerender } = render(
+      <TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={0} onGoto={onGoto} />
+    );
+    // Grab the toggle once and reuse the same node across the rerender (React preserves its
+    // identity at that position in the tree) rather than re-querying by accessible name: once
+    // active the label reads "Exploring · Exit", which doesn't match /explore/i as a substring.
+    const toggle = getByRole("button", { name: /explore/i });
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    rerender(<TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={1} onGoto={onGoto} />);
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
   });
 });
 

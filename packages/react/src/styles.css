@@ -345,3 +345,60 @@
   grid-area: body; font-size: 18px; line-height: 1.5;
 }
 .ds-scene[data-diascope-layout="stacked"] .ds-nav   { display: none; }
+
+/* --- Explore mode: toggle + drill breadcrumb -------------------------------- */
+.ds-explore-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.ds-explore-toggle {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border-strong);
+  color: var(--ds-fg-muted);
+  border-radius: var(--ds-radius-sm);
+  padding: 6px 12px;
+  min-height: 32px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+.ds-explore-toggle:hover {
+  border-color: rgba(6, 225, 236, 0.6);
+}
+.ds-explore-toggle[aria-pressed="true"] {
+  background: rgba(6, 225, 236, 0.14);
+  border-color: var(--ds-accent);
+  color: #fff;
+}
+.ds-explore-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  max-width: 260px;
+}
+.ds-explore-crumb {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border-strong);
+  color: var(--ds-fg-muted);
+  border-radius: 999px;
+  padding: 3px 10px;
+  min-height: 24px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.ds-explore-crumb:hover {
+  border-color: rgba(6, 225, 236, 0.6);
+}
+.ds-explore-toggle:focus-visible,
+.ds-explore-crumb:focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+}

@@ -18,6 +18,7 @@ import { sceneLayout } from "./layout.js";
 import {
   applyExploreOverlay,
   nextExploreTarget,
+  drillBreadcrumb,
   INACTIVE_EXPLORE_STATE,
   type ExploreState,
 } from "./explore.js";
@@ -241,6 +242,36 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
             setContentTransform(readContentTransform(el));
           }}
         />
+        <div className="ds-explore-controls">
+          <button
+            type="button"
+            className="ds-explore-toggle"
+            aria-pressed={exploreState.active}
+            onClick={() => {
+              // A drawer left open when explore mode is toggled on would float, stale, over a
+              // view that just reset to "everything visible" — always close it on entry (and
+              // harmlessly no-op if none was open).
+              setDrawer(null);
+              setExploreState(prev => (prev.active ? INACTIVE_EXPLORE_STATE : { active: true, target: null }));
+            }}
+          >
+            {exploreState.active ? "Exploring · Exit" : "Explore"}
+          </button>
+          {exploreState.active && exploreState.target?.kind === "drill" && (
+            <nav data-diascope-part="drill-breadcrumb" className="ds-explore-breadcrumb" aria-label="Container path">
+              {drillBreadcrumb(exploreState.target.containerId, index).map((id, i, arr) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="ds-explore-crumb"
+                  onClick={() => setExploreState({ active: true, target: { kind: "drill", containerId: id } })}
+                >
+                  {(index.nodes.find(n => n.id === id)?.label ?? id) + (i < arr.length - 1 ? " ›" : "")}
+                </button>
+              ))}
+            </nav>
+          )}
+        </div>
         {/* Popovers are step annotations; the drawer is a focused dialog. Never show both —
             a card sliding under/next to the dialog reads as bleed-through. */}
         {!drawer && !exploreState.active && (
