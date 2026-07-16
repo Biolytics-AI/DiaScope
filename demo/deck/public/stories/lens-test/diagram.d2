@@ -1,0 +1,5 @@
+producer: Producer { class: entry }
+queue: Queue { class: svc }
+consumer: Consumer { class: entry }
+producer -> queue: publish
+queue -> consumer: deliver

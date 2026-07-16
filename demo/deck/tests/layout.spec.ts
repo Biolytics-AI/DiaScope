@@ -387,6 +387,45 @@ test("explore mode: toggle isolates/drills, suppresses annotations, breadcrumb s
   expect(errors, `console errors during explore test:\n${errors.join("\n")}`).toHaveLength(0);
 });
 
+test("audience lenses: tab row switches views and resets to step 0, no console errors", async ({ page }) => {
+  // This test is bound to its OWN story (lens-test), independent of the STORY env var, so it
+  // still targets the two-lens document when the whole suite runs with no STORY set. Uses the
+  // same deck/canvas readiness gate as waitForDeck but with a hardcoded url.
+  const errors = collectConsoleErrors(page);
+
+  await page.goto("/?story=lens-test");
+  await page.waitForFunction(
+    () => !!(window as any).deck && !!document.querySelector(".diascope-scene svg"),
+    null,
+    { timeout: 60_000 }
+  );
+  // The tab row lives on the (single) scene slide at h=1; the title slide is h=0. Navigate to
+  // the scene so the tabs are on the visible slide and therefore clickable.
+  await page.evaluate(() => (window as any).deck.slide(1, 0));
+  await page.waitForSelector('[data-diascope-part="canvas"] svg', { timeout: 30_000 });
+  await settle(page);
+
+  const tabs = page.locator('[data-diascope-part="lens-tabs"] button');
+  await expect(tabs).toHaveCount(3); // default + ops + dev
+
+  // "default" is active on load.
+  await expect(tabs.nth(0)).toHaveAttribute("aria-pressed", "true");
+
+  await tabs.nth(1).click(); // "Ops"
+  await settle(page);
+  await expect(tabs.nth(1)).toHaveAttribute("aria-pressed", "true");
+  await assertInvariants(page, "lens: ops view active");
+  await page.screenshot({ path: `screens/lens-01-ops.png` });
+
+  await tabs.nth(2).click(); // "Dev"
+  await settle(page);
+  await expect(tabs.nth(2)).toHaveAttribute("aria-pressed", "true");
+  await assertInvariants(page, "lens: dev view active");
+  await page.screenshot({ path: `screens/lens-02-dev.png` });
+
+  expect(errors, `console/page errors during lens switch:\n${errors.join("\n")}`).toEqual([]);
+});
+
 test("explore mode auto-exits when the deck advances a step (ArrowRight)", async ({ page }, testInfo) => {
   const errors = collectConsoleErrors(page);
   await waitForDeck(page);
