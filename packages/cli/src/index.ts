@@ -1,0 +1,97 @@
+#!/usr/bin/env node
+import { Command } from "commander";
+import { runValidate } from "./commands/validate.js";
+import { runInspect } from "./commands/inspect.js";
+import { runResolve } from "./commands/resolve.js";
+
+const program = new Command().name("diascope2").description("DiaScope v2 agent CLI");
+
+program
+  .command("validate <doc>")
+  .description("Validate a narrative document against its D2 graph")
+  .option("--json", "machine-readable output")
+  .action(async (doc: string, opts: { json?: boolean }) => {
+    try {
+      const result = await runValidate(doc);
+      if (opts.json) console.log(JSON.stringify(result, null, 2));
+      else {
+        for (const e of result.errors) console.error(`ERROR ${e.path}: ${e.message}`);
+        for (const w of result.warnings) console.warn(`warn  ${w.path}: ${w.message}`);
+        console.log(result.valid ? "✓ valid" : `✗ ${result.errors.length} error(s)`);
+      }
+      process.exitCode = result.valid ? 0 : 1;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (opts.json) console.log(JSON.stringify({ valid: false, fatal: msg }, null, 2));
+      else console.error(`fatal: ${msg}`);
+      process.exitCode = 2;
+    }
+  });
+
+program
+  .command("resolve <doc>")
+  .description("Print the computed SceneState (visible/highlighted/dimmed/traced/popovers/cameraFit/text) for a scene+step")
+  .requiredOption("--scene <id>", "scene id")
+  .requiredOption("--step <n>", "step index (0-based)", (v: string) => parseInt(v, 10))
+  .option("--view <id>", "view/lens id (defaults to the scene's own steps)", "default")
+  .option("--json", "machine-readable output")
+  .action(async (doc: string, opts: { scene: string; step: number; view: string; json?: boolean }) => {
+    try {
+      const { state, graphPath } = await runResolve(doc, opts.scene, opts.step, opts.view);
+      if (opts.json) {
+        console.log(JSON.stringify({ ...state, graphPath }, null, 2));
+      } else {
+        console.log(`scene:       ${opts.scene}`);
+        console.log(`view:        ${opts.view}`);
+        console.log(`step:        ${opts.step}`);
+        console.log(`visible:     ${state.visible.join(", ") || "(none)"}`);
+        console.log(`highlighted: ${state.highlighted.join(", ") || "(none)"}`);
+        console.log(`dimmed:      ${state.dimmed.join(", ") || "(none)"}`);
+        console.log(
+          `traced:      ${state.traced.length ? state.traced.map(e => `${e.source} -> ${e.target}`).join(", ") : "(none)"}`
+        );
+        console.log(
+          `popovers:    ${state.popovers.length ? state.popovers.map(p => `${p.target}: "${p.content}"`).join("; ") : "(none)"}`
+        );
+        console.log(`cameraFit:   ${state.cameraFit.join(", ") || "(none)"}`);
+        console.log(`text.title:  ${state.text?.title ?? "(none)"}`);
+        console.log(`text.body:   ${state.text?.body ?? "(none)"}`);
+      }
+      process.exitCode = 0;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (opts.json) console.log(JSON.stringify({ error: msg }, null, 2));
+      else console.error(`fatal: ${msg}`);
+      process.exitCode = 2;
+    }
+  });
+
+const graph = program.command("graph").description("Graph inspection commands");
+graph
+  .command("inspect <d2file>")
+  .description("Print the machine-readable node/edge inventory of a D2 file")
+  .option("--json", "machine-readable output")
+  .action(async (d2file: string, opts: { json?: boolean }) => {
+    try {
+      const index = await runInspect(d2file);
+      if (opts.json) console.log(JSON.stringify(index, null, 2));
+      else {
+        // Multi-line D2 labels ("a\nb") would wrap one entry across terminal lines;
+        // flatten them in pretty mode only (--json keeps the raw label).
+        const oneLine = (label: string) => label.replace(/\n/g, " / ");
+        for (const n of index.nodes)
+          console.log(`node ${n.id}${n.classes.length ? `  [${n.classes.join(", ")}]` : ""}  "${oneLine(n.label)}"`);
+        for (const e of index.edges)
+          console.log(`edge ${e.source} -> ${e.target}${e.label ? `  "${oneLine(e.label)}"` : ""}`);
+      }
+    } catch (e) {
+      console.error(`fatal: ${e instanceof Error ? e.message : String(e)}`);
+      process.exitCode = 2;
+    }
+  });
+
+program.parseAsync().then(() => {
+  // let the process exit naturally; wasm worker keeps the loop alive otherwise
+  if (process.exitCode === undefined) process.exitCode = 0;
+  setImmediate(() => process.exit(process.exitCode as number));
+});

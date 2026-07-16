@@ -1,0 +1,24 @@
+version: 1
+graph:
+  source: ./diagram.d2
+scenes:
+  - id: main
+    text: { title: "Message flow" }
+    steps:
+      - id: overview
+        camera: { fit: all }
+        text: { title: "Overview", body: "The default, unfiltered narrative." }
+    views:
+      - id: ops
+        label: "Ops"
+        steps:
+          - id: ops-0
+            focus: [queue]
+            text: { title: "Ops lens", body: "Operators care about queue health." }
+      - id: dev
+        label: "Dev"
+        steps:
+          - id: dev-0
+            focus: [producer, queue, consumer]
+            trace: "producer->queue"
+            text: { title: "Dev lens", body: "Developers care about the full call path." }

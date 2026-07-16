@@ -1,0 +1,34 @@
+# Test fixture for demo/deck/tests/layout.spec.ts: the only story whose default AND alt views
+# both have MULTIPLE steps, so it can exercise multi-step audience-lens switching (reset to the
+# new view's step 0 + narration following the active lens) — which the single-step lens-test
+# fixture cannot. Step titles are deliberate DEFAULT-STEP-N / ALT-STEP-N markers used as test
+# assertion anchors.
+version: 1
+graph:
+  source: ./diagram.d2
+scenes:
+  - id: main
+    text: { title: "Multi-step lenses" }
+    steps:
+      - id: def-0
+        focus: [da]
+        text: { title: "DEFAULT-STEP-1", body: "Default view, step 1 (focus Default-A)." }
+      - id: def-1
+        focus: [db]
+        text: { title: "DEFAULT-STEP-2", body: "Default view, step 2 (focus Default-B)." }
+      - id: def-2
+        focus: [dc]
+        text: { title: "DEFAULT-STEP-3", body: "Default view, step 3 (focus Default-C)." }
+    views:
+      - id: alt
+        label: "Alt"
+        steps:
+          - id: alt-0
+            focus: [aa]
+            text: { title: "ALT-STEP-1", body: "Alt view, step 1 (focus Alt-A)." }
+          - id: alt-1
+            focus: [ab]
+            text: { title: "ALT-STEP-2", body: "Alt view, step 2 (focus Alt-B)." }
+          - id: alt-2
+            focus: [ac]
+            text: { title: "ALT-STEP-3", body: "Alt view, step 3 (focus Alt-C)." }

@@ -1,0 +1,90 @@
+version: 1
+graph:
+  source: ./diagram.d2
+
+scenes:
+  - id: kickoff
+    layout: two-pane
+    text:
+      title: "How PKCE authorization codes get requested"
+    annotations:
+      nodes:
+        client.verifier: "<p>Generated fresh per login attempt using a cryptographically random string, then SHA-256 hashed into the challenge.</p>"
+        authserver.authorize: "<p>Public endpoint; accepts the code_challenge instead of a confidential client secret, which is what makes PKCE safe for public clients.</p>"
+      edges:
+        "GET /authorize": "Includes code_challenge and challenge method (S256)."
+    steps:
+      - id: intro
+        text:
+          title: "Four zones make up the PKCE flow: user, client, authorization server, and resource server"
+          body: "<p>A <strong>user</strong> starts sign-in in a <strong>client app</strong>, which talks to an <strong>authorization server</strong> and, later, a <strong>resource server</strong>.</p>"
+        camera:
+          fit: all
+      - id: generate-pkce
+        text:
+          title: "Before redirecting anywhere, the client generates a PKCE verifier and challenge"
+          body: "<p>The client creates a random <code>code_verifier</code>, hashes it into a <code>code_challenge</code>, and keeps the verifier secret on-device.</p>"
+        focus: [client.app, client.verifier]
+        popover:
+          target: client.verifier
+          content: "Random secret kept on the client; only its hash (code_challenge) is ever sent over the network."
+      - id: redirect-to-authorize
+        text:
+          title: "The browser carries the code_challenge to the authorization server"
+          body: "<p>The client redirects the <strong>browser</strong> to <code>/authorize</code>, attaching the <code>code_challenge</code> instead of a client secret.</p>"
+        focus: [client.app, browser, authserver.authorize]
+        trace: "client.app->browser->authserver.authorize"
+      - id: auth-code-returns
+        text:
+          title: "After the user authenticates, the authorization server redirects back with a one-time code"
+          body: "<p>The authorization server never returns tokens directly to the browser — only a short-lived <strong>authorization code</strong>.</p>"
+        focus: [authserver.authorize, browser, client.app]
+        trace: "authserver.authorize->browser->client.app"
+
+  - id: token-exchange
+    layout: two-pane
+    text:
+      title: "Redeeming the code for tokens, then calling the API"
+    annotations:
+      nodes:
+        authserver.token: "<p>Confidential endpoint: exchanges an authorization code + code_verifier for access (and optionally refresh) tokens.</p>"
+        resource.api: "<p>Resource server validates the access token (e.g. JWT signature or introspection) before serving protected data.</p>"
+      edges:
+        "POST code + code_verifier": "Body includes grant_type=authorization_code, the code, redirect_uri, and code_verifier."
+    steps:
+      - id: narrow-in
+        text:
+          title: "The client narrows in on the exchange: app, verifier, and the token endpoint"
+        show: [client.app, client.verifier, authserver.token]
+        camera:
+          fit: all
+      - id: exchange-code
+        text:
+          title: "The client proves it owns the original secret by sending the raw code_verifier"
+          body: "<p>The authorization server recomputes the hash of <code>code_verifier</code> and compares it to the <code>code_challenge</code> it stored earlier.</p>"
+        focus: [client.app, authserver.token]
+        trace: "client.app->authserver.token"
+        popover:
+          target: authserver.token
+          content: "Rejects the exchange if the recomputed hash doesn't match the stored code_challenge."
+      - id: tokens-issued
+        text:
+          title: "A match returns an access token straight to the client — no browser redirect needed"
+        focus: [authserver.token, client.app]
+        trace: "authserver.token->client.app"
+      - id: call-api
+        text:
+          title: "The client presents the access token to the resource server"
+        show: [resource.api]
+        focus: [client.app, resource.api]
+        trace: "client.app->resource.api"
+        popover:
+          target: resource.api
+          content: "Validates the bearer token before returning any protected data."
+      - id: data-returns
+        text:
+          title: "The resource server returns protected data, completing the round trip"
+        focus: [resource.api, client.app]
+        trace: "resource.api->client.app"
+        camera:
+          fit: all

@@ -1,0 +1,39 @@
+version: 1
+graph:
+  source: ./diagram.d2
+
+# Regression fixture: a five-node vertical chain (direction: down) whose union-bounds aspect
+# is well below WIDE_ASPECT_THRESHOLD (2.2), so it MUST keep the classic side-by-side layout
+# (diagram left, narration pane right) and never flip to the stacked wide-diagram layout.
+scenes:
+  - id: pipeline
+    layout: two-pane
+    text:
+      title: "A tall request pipeline"
+    annotations:
+      nodes:
+        C: "<p><strong>Business logic.</strong> The core processing stage where domain rules are applied before anything is persisted.</p>"
+      edges:
+        "write": "Persists the validated, processed record to durable storage."
+    steps:
+      - id: overview
+        text:
+          title: "Five stages run top to bottom"
+          body: "<p>A request flows straight down — validation, business logic, persistence, response — a classic vertical pipeline that stays narrow and tall.</p>"
+        camera:
+          fit: all
+      - id: core
+        text:
+          title: "The core path: validate, process, persist"
+          body: "<p>The middle stages carry the request from <strong>validation</strong> through business logic to durable <strong>persistence</strong>.</p>"
+        focus: [B, C, D]
+        trace: "B->C->D"
+        popover:
+          target: C
+          content: "Domain rules are applied here before anything is written."
+      - id: response
+        text:
+          title: "The pipeline serializes a response back to the client"
+          body: "<p>Once persisted, the final stage serializes and returns the <strong>response</strong>.</p>"
+        focus: [D, E]
+        trace: "D->E"

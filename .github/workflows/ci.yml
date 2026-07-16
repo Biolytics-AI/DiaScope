@@ -21,17 +21,14 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build:tsc
+        run: npm run build
 
       - name: Test
         run: npm test
-
-      - name: Bundle (browser)
-        run: node esbuild.mjs
 
       - name: Upload bundle artifact
         uses: actions/upload-artifact@v4
         with:
           name: diascope-bundle
-          path: dist/diascope.bundle.js
+          path: packages/diascope/dist/diascope.bundle.js
           if-no-files-found: warn

@@ -1,0 +1,106 @@
+classes: {
+  producer: {
+    style: {
+      fill: "#1e3a5f"
+      stroke: "#63b3ed"
+      font-color: "#e6f0fa"
+    }
+  }
+  topic: {
+    style: {
+      fill: "#1f4530"
+      stroke: "#68d391"
+      font-color: "#e8f9ee"
+    }
+  }
+  dlqtopic: {
+    style: {
+      fill: "#4a1515"
+      stroke: "#fc8181"
+      font-color: "#fdeaea"
+    }
+  }
+  consumer: {
+    style: {
+      fill: "#3c2a5e"
+      stroke: "#b794f4"
+      font-color: "#f1e9fb"
+    }
+  }
+  tool: {
+    style: {
+      fill: "#5c4415"
+      stroke: "#f6ad55"
+      font-color: "#fdf3e4"
+    }
+  }
+  sink: {
+    style: {
+      fill: "#2d3748"
+      stroke: "#cbd5e0"
+      font-color: "#f0f2f5"
+    }
+  }
+}
+
+producers: "Producers" {
+  style: {
+    stroke: "#a0aec0"
+    font-color: "#e2e8f0"
+  }
+  order_svc: "Order Service" {
+    class: producer
+  }
+  payment_svc: "Payment Service" {
+    class: producer
+  }
+}
+
+kafka: "Kafka Cluster" {
+  style: {
+    stroke: "#a0aec0"
+    font-color: "#e2e8f0"
+  }
+  orders_topic: "orders (3 partitions)" {
+    class: topic
+  }
+  retry_topic: "orders-retry" {
+    class: topic
+  }
+  dlq_topic: "orders-dlq" {
+    class: dlqtopic
+  }
+}
+
+consumers: "Consumer Group: order-processor" {
+  style: {
+    stroke: "#a0aec0"
+    font-color: "#e2e8f0"
+  }
+  worker: "Worker Instance" {
+    class: consumer
+  }
+}
+
+db: "Order Database" {
+  class: sink
+}
+
+replay: "DLQ Replay Tool" {
+  class: tool
+}
+
+monitor: "Monitoring & Alerting" {
+  class: tool
+}
+
+producers.order_svc -> kafka.orders_topic: "produce order.created"
+producers.payment_svc -> kafka.orders_topic: "produce payment.processed"
+kafka.orders_topic -> consumers.worker: "poll batch"
+consumers.worker -> db: "persist"
+consumers.worker -> kafka.retry_topic: "nack: retryable error"
+kafka.retry_topic -> consumers.worker: "redeliver after backoff"
+consumers.worker -> kafka.dlq_topic: "max retries exceeded"
+kafka.dlq_topic -> monitor: "DLQ depth alert"
+kafka.dlq_topic -> replay: "read for inspection"
+replay -> kafka.orders_topic: "republish fixed message"

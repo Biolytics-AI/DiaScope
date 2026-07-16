@@ -1,0 +1,135 @@
+version: 1
+graph:
+  source: ./diagram.d2
+
+scenes:
+  # ─── Scene 1: the corpus data path (ingest → index → retrieve) ────────────────
+  - id: ingest-and-serve
+    layout: two-pane
+    text:
+      title: "C2F functionality: what users and systems can do"
+    annotations:
+      nodes:
+        Ingestion.Submit: |
+          <p><strong>Connector API.</strong> <code>POST /v1/batches</code> accepts PHI-minimized records. The connector runs inside the Gerimedica environment; data is stripped of PHI before transmission.</p>
+        Retrieval.ClientAnswers: |
+          <p><strong>Patient mapping stays client-side.</strong> The C2F runtime returns UUID-keyed taxonomy matches. The UUID-to-patient join happens inside the Gerimedica environment, never inside the C2F project runtime.</p>
+      edges:
+        "submit corpus batch": "Connector submits PHI-minimized batches from inside the Gerimedica environment — PHI never enters the C2F runtime."
+        "trigger extraction pipeline": "Extraction is queued asynchronously after the batch lands in object storage."
+        "trigger index build": "Index is rebuilt from the relational source of truth, not from raw batch content — keeps the search index deterministic."
+        "proxy structured answer to client": "Answer is keyed by UUID — the patient-level join happens entirely inside the Gerimedica client environment."
+    steps:
+      - id: overview
+        text:
+          title: "Six phases connect four actors to one searchable corpus"
+          body: |
+            <p>Four <strong>actors</strong> — a data engineer, a taxonomy curator, a platform operator, and the Gerimedica AI agent — drive the platform's capability zones: ingestion, authoring, retrieval, and portal control.</p>
+            <p>This scene follows the <strong>corpus data path</strong>: a batch is submitted, extracted, indexed, and finally searched by the agent.</p>
+        camera:
+          fit: all
+
+      - id: ingest
+        text:
+          title: "Data engineers submit PHI-minimized batches"
+          body: |
+            <p>The ingestion entry point is a batch API. The connector runs inside the Gerimedica environment and submits records already stripped of PHI before they cross the client boundary.</p>
+            <p>Submission does two things: source artifacts are persisted to object storage, and the extraction pipeline is queued. This is the <strong>only</strong> point where data enters the C2F runtime.</p>
+        focus: [Actors.Engineer, Ingestion.Submit, Ingestion.BatchStore, Ingestion.Extract]
+        trace:
+          - "Actors.Engineer->Ingestion.Submit->Ingestion.BatchStore"
+          - "Ingestion.Submit->Ingestion.Extract"
+        popover:
+          target: Ingestion.Submit
+          content: "POST /v1/batches accepts PHI-minimized records — PHI never crosses into the C2F runtime."
+
+      - id: index
+        text:
+          title: "Extracted records are indexed for semantic search"
+          body: |
+            <p>Extraction produces structured records that land in the relational source of truth inside the project runtime.</p>
+            <p>Those records drive the index build: the semantic index is populated from the relational store, not raw batch content — making it a <strong>deterministic</strong> output of the source of truth.</p>
+        focus: [Ingestion.Extract, Ingestion.RecordStore, Ingestion.BuildIndex, Retrieval.SearchStore]
+        trace: "Ingestion.Extract->Ingestion.RecordStore->Ingestion.BuildIndex->Retrieval.SearchStore"
+        popover:
+          target: Ingestion.BuildIndex
+          content: "The index is rebuilt from the relational source of truth, not raw batches, so search stays deterministic."
+
+      - id: retrieve
+        text:
+          title: "The Gerimedica agent retrieves structured answers"
+          body: |
+            <p>The agent discovers capabilities through the tool manifest, then runs semantic search against the active version's index. Matches come back as taxonomy nodes.</p>
+            <p>It builds a structured answer via the answer proxy, which routes back to the client. The <strong>UUID-to-patient mapping never enters C2F</strong> — it is joined client-side.</p>
+        focus: [Actors.Agent, Retrieval.ToolManifest, Retrieval.SemanticSearch, Retrieval.SearchStore, Retrieval.AnswerProxy, Retrieval.ClientAnswers]
+        trace:
+          - "Actors.Agent->Retrieval.ToolManifest"
+          - "Actors.Agent->Retrieval.SemanticSearch->Retrieval.SearchStore->Retrieval.AnswerProxy->Retrieval.ClientAnswers"
+        popover:
+          target: Retrieval.ClientAnswers
+          content: "UUID-keyed matches are returned; the patient-level join happens inside the Gerimedica environment, never in C2F."
+
+  # ─── Scene 2: the taxonomy control path (portal → author → publish/activate) ──
+  - id: author-and-publish
+    layout: two-pane
+    text:
+      title: "Authoring and releasing the taxonomy"
+    annotations:
+      nodes:
+        Control.LaunchWorkbench: |
+          <p><strong>Full-screen handoff (PORTAL-07).</strong> The portal resolves the project runtime endpoint, hands the user into the dedicated cluster via a session token, and the workbench loads its own project context on first paint.</p>
+        Authoring.DraftStore: |
+          <p><strong>Mutable draft.</strong> There is exactly one mutable draft per project. Edits are autosaved to the relational source of truth. Publishing a version does not clear the draft — the curator can continue editing after publishing.</p>
+        Authoring.VersionStore: |
+          <p><strong>Immutable published versions.</strong> Each publish creates a snapshot with a stable version ID. Versions are never mutated. The active version pointer is what the retrieval layer uses.</p>
+      edges:
+        "route to dedicated runtime": "Portal resolves the runtime endpoint and issues a session token for the handoff (PORTAL-07)."
+        "activate version pointer": "Activation is the only action that changes what the retrieval layer sees — no implicit active version changes."
+    steps:
+      - id: control-overview
+        text:
+          title: "Operators and curators govern the taxonomy retrieval reads"
+          body: |
+            <p>The control path is how the taxonomy behind retrieval is authored and released. A platform <strong>operator</strong> manages projects from the portal; a <strong>curator</strong> edits, validates, publishes, and activates versions.</p>
+            <p>Everything here ultimately feeds the same <code>Weaviate</code> active-version index the agent searched in the previous scene.</p>
+        camera:
+          fit: [Actors, Control, Authoring]
+
+      - id: portal
+        text:
+          title: "Operators manage projects and launch the workbench"
+          body: |
+            <p>The operator logs into the portal and lands on a workspace of project cards, each showing runtime health and key status signals.</p>
+            <p>Drilling into a project summary exposes batches, index status, and runtime health, then launches the workbench into that project's dedicated runtime. The portal is a control-plane gateway, not the workbench host.</p>
+        focus: [Actors.Operator, Control.Login, Control.Workspace, Control.ProjectView, Control.RuntimeHealth, Control.LaunchWorkbench]
+        trace:
+          - "Actors.Operator->Control.Login->Control.Workspace->Control.ProjectView"
+          - "Control.ProjectView->Control.RuntimeHealth"
+          - "Control.ProjectView->Control.LaunchWorkbench"
+        popover:
+          target: Control.LaunchWorkbench
+          content: "The portal resolves the runtime endpoint and hands the user into the dedicated cluster via a session token (PORTAL-07)."
+
+      - id: author
+        text:
+          title: "Curators edit and validate the taxonomy draft"
+          body: |
+            <p>The workbench opens full-screen and project-scoped. The curator works on a single <strong>mutable draft</strong> — adding, renaming, and restructuring nodes and edges — with autosave to the relational store.</p>
+            <p>At any point the draft can be validated against the indexed corpus to surface coverage gaps and ambiguous node mappings.</p>
+        focus: [Control.LaunchWorkbench, Actors.Curator, Authoring.OpenWorkbench, Authoring.EditDraft, Authoring.DraftStore, Authoring.Validate]
+        trace:
+          - "Control.LaunchWorkbench->Authoring.OpenWorkbench->Authoring.EditDraft->Authoring.DraftStore"
+          - "Actors.Curator->Authoring.OpenWorkbench"
+          - "Authoring.EditDraft->Authoring.Validate"
+
+      - id: publish
+        text:
+          title: "Publishing freezes a version; activation points retrieval at it"
+          body: |
+            <p>Publishing creates an <strong>immutable snapshot</strong> of the draft — an independently addressable version with its own search index. Old versions are retained for a full audit trail.</p>
+            <p>Activating a version sets the retrieval pointer: every subsequent search and agent call targets this version's index until another is activated.</p>
+        focus: [Authoring.Validate, Authoring.Publish, Authoring.VersionStore, Authoring.ActivateVersion, Retrieval.SearchStore]
+        trace: "Authoring.Validate->Authoring.Publish->Authoring.VersionStore->Authoring.ActivateVersion->Retrieval.SearchStore"
+        popover:
+          target: Authoring.ActivateVersion
+          content: "Activation is the only action that changes what the retrieval layer sees — there are no implicit active-version changes."

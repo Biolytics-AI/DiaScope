@@ -16,6 +16,52 @@ Docs: `https://diascope.biolytics.ai`
 
 ---
 
+## DiaScope v2 (in development)
+
+DiaScope is being rebuilt from a single-purpose HTML exporter into a **graph-native
+presentation engine**: a canonical narrative document (validated JSON Schema) sits over a
+compiled [D2](https://d2lang.com) graph, and a pure step-resolution function computes the
+full visual state — visible/highlighted/dimmed nodes, traced edges, open popovers, camera
+fit — from the document alone. Forward and backward navigation always agree because there
+is no hidden per-step delta, just that pure function evaluated at a given step index. The
+new engine targets [reveal.js](https://revealjs.com) decks first, so DiaScope stories can
+live as slides inside a real presentation rather than only as a standalone HTML file.
+
+The rebuild lives in an npm-workspaces monorepo alongside the existing package:
+
+| Path | Role |
+|---|---|
+| `packages/core` | Canonical narrative AST (Zod schema + generated JSON Schema) and validation — selectors, visibility folding, verb semantics. |
+| `packages/d2` | D2 WASM compiler: produces the SVG plus a semantic index of every node/edge id, class, and geometry. |
+| `packages/react` | Renderer — the two-pane scene (diagram canvas + narration pane), camera animation, popovers, and the click-to-open detail drawer. |
+| `packages/reveal` | reveal.js adapter — binds narrative steps to reveal.js fragments so deck navigation and story navigation stay in sync. |
+| `packages/cli` | Agent-facing CLI, `diascope2` — `graph inspect`, `validate`, and `resolve` (preview a step's computed state) against a narrative document, with `--json` output for scripting. |
+| `demo/deck` | A `@revealjs/react` demo deck exercising the full stack end to end. |
+
+**Quickstart:**
+
+```bash
+npm install
+npm run build
+npm run dev -w diascope-demo-deck
+```
+
+**Layout verification** (Playwright bounding-box invariants — pane/canvas overlap,
+popover containment, camera framing — across viewports and navigation directions):
+
+```bash
+npm run test:layout -w diascope-demo-deck
+```
+
+**Authoring a story?** Start with [docs/authoring.md](docs/authoring.md) — the complete
+contract for writing narrative documents, written to be followable by an agent with no
+other context than that guide, the JSON Schema, and the CLI.
+
+The legacy `@biolytics.ai/diascope` CLI documented below is **unchanged** and keeps
+working exactly as-is — it now lives at `packages/diascope` in this monorepo.
+
+---
+
 ## How it looks
 
 ![DiaScope walkthrough](docs/demo.gif)

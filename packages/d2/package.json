@@ -1,0 +1,19 @@
+{
+  "name": "@diascope/d2",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@terrastruct/d2": "^0.1.33",
+    "@diascope/core": "*"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}

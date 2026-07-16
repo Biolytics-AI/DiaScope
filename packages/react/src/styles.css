@@ -1,0 +1,442 @@
+/* ---------------------------------------------------------------------------
+   DiaScope scene tokens + reveal-theme reset.
+
+   DiaScope is often mounted inside a reveal.js deck whose theme (e.g. black.css)
+   imposes 42px centered UPPERCASE headings on everything it contains. Rather than
+   let that bleed in (which broke the drawer + titles pre-audit), `.ds-scene` owns
+   its own typography: it sets an explicit base size/alignment and neutralises the
+   inherited transforms, so every DiaScope surface renders in DiaScope's language.
+   All sizes are explicit px (not em) so they don't compound with the host's base.
+--------------------------------------------------------------------------- */
+.ds-scene {
+  --ds-accent: #06e1ec;
+  --ds-surface: rgba(13, 20, 32, 0.96);
+  --ds-surface-solid: #0d1420;
+  --ds-panel: rgba(13, 20, 32, 0.98);
+  --ds-border: rgba(232, 240, 255, 0.14);
+  --ds-border-strong: rgba(232, 240, 255, 0.28);
+  --ds-fg: #dbe4f0;
+  --ds-fg-strong: #f2f6fc;
+  --ds-fg-muted: #dbe7ff;
+  --ds-radius-lg: 12px;
+  --ds-radius-md: 10px;
+  --ds-radius-sm: 8px;
+
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  /* Query container so the narrow-layout path below keys off the scene's own size, not the
+     viewport (which reveal.js hides behind a fixed 1280x720 CSS-scaled stage). A container
+     query can't restyle the container element itself, so the actual canvas/pane row lives in
+     .ds-scene-inner — a descendant the query can flip to a column. */
+  container-type: size;
+  text-align: left;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ds-fg);
+}
+.ds-scene-inner {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  gap: 12px;
+}
+/* Neutralise reveal's heading transforms on any DiaScope title. */
+.ds-scene h2,
+.ds-title {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* --- Emphasis / trace choreography ---------------------------------------- */
+.ds-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.ds-dim {
+  opacity: 0.22;
+}
+.ds-dim,
+.ds-highlight,
+.ds-hidden,
+.ds-trace {
+  transition: opacity 400ms ease;
+}
+.ds-highlight {
+  filter: drop-shadow(0 0 4px rgba(6, 225, 236, 0.45));
+}
+.ds-trace path {
+  stroke-width: 3.5 !important;
+}
+
+/* --- Canvas ---------------------------------------------------------------- */
+.ds-canvas-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+  background: var(--ds-surface-solid);
+  border: 1px solid rgba(232, 240, 255, 0.1);
+  border-radius: var(--ds-radius-lg);
+}
+/* Wide diagrams can extend past the fitted viewBox and get hard-clipped at the frame's
+   right edge; this subtle fade into the frame color makes the crop read as intentional.
+   It sits above the (static) svg host but below the z-indexed popover/tooltip/drawer
+   layers, so cards are never veiled by it. */
+.ds-canvas-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent 96%, var(--ds-surface-solid) 100%);
+}
+.ds-popover-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+.ds-popover {
+  position: absolute;
+  /* PopoverLayer positions the card using CARD_WIDTH (260) as its full width, including when
+     it flips to the target's left; border-box keeps the rendered width equal to that so
+     padding/border don't push a left-flipped card back over its target node. */
+  box-sizing: border-box;
+  pointer-events: auto;
+  background: var(--ds-popover-bg, var(--ds-surface));
+  color: var(--ds-popover-fg, #e8f0ff);
+  border: 1px solid var(--ds-popover-border, rgba(6, 225, 236, 0.4));
+  border-radius: var(--ds-radius-md);
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+/* --- Narration pane -------------------------------------------------------- */
+.ds-pane {
+  flex: 0 0 320px;
+  overflow-y: auto;
+  padding: 16px;
+  text-align: left;
+}
+.ds-scene .ds-title {
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 600;
+  margin: 0 0 10px;
+  color: var(--ds-fg-strong);
+  text-wrap: balance;
+}
+.ds-scene .ds-body {
+  font-size: 20px;
+  line-height: 1.55;
+  color: var(--ds-fg);
+}
+
+/* --- Step pills ------------------------------------------------------------ */
+.ds-pills {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.ds-scene .ds-pill {
+  border-radius: 999px;
+  /* Pre-scale sizes chosen so the rendered hit area stays >=24px even under reveal's
+     narrow-viewport transform scale (~0.78 at 1000x700) — WCAG 2.5.8 target size. */
+  padding: 5px 14px;
+  min-height: 32px;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--ds-border-strong);
+  color: var(--ds-fg-muted);
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+.ds-scene .ds-pill:hover {
+  border-color: rgba(6, 225, 236, 0.6);
+}
+.ds-scene .ds-pill-active {
+  background: rgba(6, 225, 236, 0.14);
+  border-color: var(--ds-accent);
+  outline: none;
+  color: #fff;
+}
+
+/* --- Prev / next nav ------------------------------------------------------- */
+.ds-nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.ds-scene .ds-nav button {
+  background: transparent;
+  border: 1px solid var(--ds-border-strong);
+  color: var(--ds-fg-muted);
+  border-radius: var(--ds-radius-sm);
+  min-width: 36px;
+  min-height: 32px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 120ms ease, opacity 120ms ease;
+}
+.ds-scene .ds-nav button:hover:not(:disabled) {
+  border-color: rgba(6, 225, 236, 0.6);
+}
+.ds-scene .ds-nav button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Inside a reveal.js deck the deck's own controls + the pills already drive steps,
+   so the pane's redundant prev/next is hidden (resolves the two-nav-systems tell). */
+.diascope-enabled .ds-nav {
+  display: none;
+}
+
+/* --- Edge tooltip ---------------------------------------------------------- */
+.ds-tooltip {
+  position: absolute;
+  max-width: 320px;
+  background: var(--ds-surface);
+  color: #e8f0ff;
+  padding: 6px 10px;
+  border-radius: var(--ds-radius-sm);
+  font-size: 13px;
+  line-height: 1.4;
+  z-index: 30;
+  pointer-events: none;
+}
+
+/* --- Node-detail drawer ---------------------------------------------------- */
+/* Rendered inside .ds-canvas-wrap (see TwoPaneScene) so it slides over the diagram
+   only and never overlaps the narration pane. Own typography, reset from reveal. */
+.ds-drawer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: auto;
+  max-height: 100%;
+  width: 320px;
+  max-width: 80%;
+  box-sizing: border-box;
+  /* Fully opaque: popovers/diagram must never bleed through the dialog. */
+  background: var(--ds-surface-solid);
+  color: var(--ds-fg);
+  padding: 16px;
+  overflow-y: auto;
+  z-index: 20;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.55;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: -10px 0 28px rgba(0, 0, 0, 0.35);
+}
+.ds-drawer p {
+  margin: 0 0 10px;
+}
+.ds-drawer code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  display: inline-block;
+  max-width: 100%;
+  color: var(--ds-fg-strong);
+}
+.ds-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ds-drawer-header button {
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid var(--ds-border);
+  color: var(--ds-fg-muted);
+  border-radius: var(--ds-radius-sm);
+  min-width: 28px;
+  min-height: 28px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ds-drawer-header button:hover {
+  border-color: rgba(6, 225, 236, 0.6);
+}
+
+/* --- Focus visibility ------------------------------------------------------ */
+/* High-contrast ring that survives the reveal transform scale, on every keyboard
+   target: pills, nav, drawer close, and keyboard-reachable diagram nodes. */
+.ds-scene .ds-pill:focus-visible,
+.ds-scene .ds-nav button:focus-visible,
+.ds-drawer button:focus-visible,
+.ds-scene [role="button"]:focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+}
+
+.ds-scene-error {
+  padding: 16px;
+  color: #ff8f8f;
+  font-size: 14px;
+}
+
+/* --- Narrow layout (container-query driven, keyed off the scene's own box) --- */
+@container (max-width: 900px) {
+  .ds-scene-inner {
+    flex-direction: column;
+  }
+  .ds-pane {
+    flex: 0 0 auto;
+    max-height: 40%;
+  }
+}
+
+/* --- Stacked layout (wide diagrams): diagram on top, narration band below --- */
+/* First cut — a follow-up browser pass tunes max-height / grid ratios against real content
+   (see docs/superpowers/specs/2026-07-15-adaptive-layout-design.md). */
+.ds-scene[data-diascope-layout="stacked"] .ds-scene-inner {
+  flex-direction: column;
+}
+.ds-scene[data-diascope-layout="stacked"] .ds-canvas-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+.ds-scene[data-diascope-layout="stacked"] .ds-pane {
+  flex: 0 0 auto;
+  width: 100%;
+  /* border-box so the pane's 16px padding stays INSIDE its 100% width — content-box would
+     push it 32px past the scene's right edge and truncate the body text (verified in-browser). */
+  box-sizing: border-box;
+  /* The band is content-sized but bounded to keep the canvas wide-and-short (~2.5–2.9:1, the
+     aspect that fills a wide diagram). A floor stops a terse one-line step from collapsing the
+     band and leaving the canvas tall/square; a cap stops a verbose step from eating the diagram
+     (overflow-y already scrolls past it). Percentage heights don't clamp reliably for this flex
+     item, so we use container-query height units — `.ds-scene` is `container-type: size`, so
+     `cqh` resolves against the scene's own height into a concrete length flexbox honours. */
+  min-height: 30cqh;   /* canvas <= ~70% */
+  max-height: 38cqh;   /* canvas >= ~62% */
+  padding: 16px 24px;
+  /* Reflow the pane into a wide short band: pills across the top, then title + body, centered
+     vertically so a short caption reads as an intentional band rather than top-aligned text. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
+  grid-template-areas: "pills pills" "title body";
+  column-gap: 28px;
+  row-gap: 8px;
+  align-content: center;
+  /* Hairline separating the band from the diagram above, so the full-bleed band is deliberate. */
+  border-top: 1px solid var(--ds-border);
+}
+.ds-scene[data-diascope-layout="stacked"] .ds-pills { grid-area: pills; margin: 0 0 2px; }
+.ds-scene[data-diascope-layout="stacked"] .ds-title {
+  grid-area: title; margin: 0; font-size: 22px; line-height: 1.22;
+}
+.ds-scene[data-diascope-layout="stacked"] .ds-body  {
+  grid-area: body; font-size: 18px; line-height: 1.5;
+}
+.ds-scene[data-diascope-layout="stacked"] .ds-nav   { display: none; }
+
+/* --- Explore mode: toggle + drill breadcrumb -------------------------------- */
+.ds-explore-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.ds-explore-toggle {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border-strong);
+  color: var(--ds-fg-muted);
+  border-radius: var(--ds-radius-sm);
+  padding: 6px 12px;
+  min-height: 32px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+.ds-explore-toggle:hover {
+  border-color: rgba(6, 225, 236, 0.6);
+}
+.ds-explore-toggle[aria-pressed="true"] {
+  /* The active tint must stay legible over ANY diagram content the toggle floats above:
+     drilling into a light-filled container puts the button over a near-white backdrop, and a
+     bare rgba(...,0.14) fill let that bleed through until the white label lost contrast. Layer
+     the cyan tint over the SOLID surface so the button is opaque (dark teal) on every backdrop
+     while still reading as accent-active via the tint + cyan border. */
+  background: linear-gradient(0deg, rgba(6, 225, 236, 0.18), rgba(6, 225, 236, 0.18)),
+    var(--ds-surface-solid);
+  border-color: var(--ds-accent);
+  color: #fff;
+}
+.ds-explore-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  max-width: 260px;
+}
+.ds-explore-crumb {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border-strong);
+  color: var(--ds-fg-muted);
+  border-radius: 999px;
+  padding: 3px 10px;
+  min-height: 24px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.ds-explore-crumb:hover {
+  border-color: rgba(6, 225, 236, 0.6);
+}
+.ds-explore-toggle:focus-visible,
+.ds-explore-crumb:focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+}
+
+/* --- Lens tabs (audience views) ---------------------------------------------- */
+.ds-lens-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.ds-scene .ds-lens-tab {
+  border-radius: var(--ds-radius-sm);
+  padding: 5px 12px;
+  min-height: 28px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--ds-border-strong);
+  color: var(--ds-fg-muted);
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+.ds-scene .ds-lens-tab:hover {
+  border-color: rgba(6, 225, 236, 0.6);
+}
+.ds-scene .ds-lens-tab-active {
+  background: rgba(6, 225, 236, 0.14);
+  border-color: var(--ds-accent);
+  color: #fff;
+}
+.ds-scene .ds-lens-tab:focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+}

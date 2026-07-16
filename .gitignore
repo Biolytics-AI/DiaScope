@@ -1,6 +1,10 @@
 node_modules/
 dist/
+*.tsbuildinfo
 .history/
 docs/plans/
 .env
 .playwright-mcp/
+demo/deck/test-results/
+demo/deck/screens/
+demo/deck/playwright-report/

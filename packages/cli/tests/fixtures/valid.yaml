@@ -1,0 +1,20 @@
+version: 1
+graph:
+  source: ./graph.d2
+scenes:
+  - id: main
+    layout: two-pane
+    steps:
+      - id: intro
+        text:
+          title: Introduction
+        focus: [request]
+        camera:
+          fit: selection
+      - id: detail
+        text:
+          title: The request path
+        trace: request->sys.api
+        popover:
+          target: sys.api
+          content: The API service handles incoming requests.

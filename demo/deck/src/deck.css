@@ -1,0 +1,47 @@
+/* Structural: reveal.js scales its configured base size (1280x720) to fit the viewport, so
+   size the scene to fill that base rather than viewport units (which would be scaled again
+   and overflow). Typography for DiaScope surfaces now lives in @diascope/react/styles.css
+   as explicit px sizes scoped to .ds-scene, so the old em-based hacks here are gone. */
+.reveal .diascope-scene { width: 100%; height: 100%; }
+.reveal .slides section:has(.diascope-scene) { position: absolute; inset: 0; height: 100%; width: 100%; padding: 0; }
+
+/* Title slide — a deliberate left-aligned block that shares the scenes' language rather
+   than reveal's centered default: accent rule, sentence-case heading, subtitle, hint. */
+.reveal .deck-title {
+  max-width: 900px;
+  padding: 0 6% ;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+}
+.reveal .deck-title-rule {
+  width: 64px;
+  height: 4px;
+  border-radius: 999px;
+  background: #06e1ec;
+  margin-bottom: 28px;
+}
+.reveal .deck-title h2 {
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
+  font-size: 2em;
+  line-height: 1.1;
+  margin: 0 0 0.4em;
+  color: #f2f6fc;
+  text-wrap: balance;
+}
+.reveal .deck-title-sub {
+  font-size: 0.7em;
+  line-height: 1.5;
+  color: #b9c6da;
+  margin: 0 0 1.6em;
+}
+.reveal .deck-title-hint {
+  font-size: 0.55em;
+  letter-spacing: 0.04em;
+  color: #6f8296;
+  margin: 0;
+}

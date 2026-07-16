@@ -1,0 +1,14 @@
+version: 1
+graph:
+  source: ./graph.d2
+scenes:
+  - id: main
+    steps:
+      - id: s0
+        camera: { fit: all }
+    views:
+      - id: legal
+        label: Legal
+        steps:
+          - id: l0
+            focus: [sys.api]
