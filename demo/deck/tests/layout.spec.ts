@@ -96,6 +96,20 @@ const sceneOrientation = (page: Page): Promise<string | null> =>
     return vis?.getAttribute("data-diascope-layout") ?? null;
   });
 
+// The `.ds-title` step title (NarrativePane.tsx) of the currently-*visible* scene, picked the
+// same way sceneOrientation picks it — checkVisibility skips the display:none non-current
+// scenes reveal keeps mounted. Both vLLM chapter scenes render the same shared diagram SVG, so
+// the per-scene distinctive marker is this narration title ("The full deployment" for
+// request-path, "What gets recorded" for audit-trail), not anything in the graph.
+const visibleTitle = (page: Page): Promise<string> =>
+  page.evaluate(() => {
+    const scenes = [...document.querySelectorAll('[data-diascope-part="scene"]')] as HTMLElement[];
+    const vis = scenes.find(s =>
+      (s as any).checkVisibility?.({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true })
+    );
+    return (vis?.querySelector(".ds-title")?.textContent ?? "").trim();
+  });
+
 // reveal.js keeps every slide in the DOM; non-current scenes are display:none and thus
 // report all-zero rects from getBoundingClientRect. Keep only the parts that actually have
 // on-screen geometry so a single visible scene's parts are what we assert against.
@@ -458,4 +472,62 @@ test("explore mode auto-exits when the deck advances a step (ArrowRight)", async
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
 
   expect(errors, `console errors during auto-exit test:\n${errors.join("\n")}`).toHaveLength(0);
+});
+
+test("document-driven chapters: vLLM's two request-flow scenes stack into one horizontal chapter slide", async ({ page }) => {
+  // Bound to the DEFAULT vLLM story (page.goto("/")) regardless of the STORY env var — like the
+  // lens test binds to its own story. This test proves the chapter *topology*, so a suite run
+  // with STORY=c2f-flow (a chapterless story) must NOT repoint it at that doc. Same deck+canvas
+  // readiness gate as waitForDeck, just with a hardcoded url.
+  const errors = collectConsoleErrors(page);
+  await page.goto("/");
+  await page.waitForFunction(
+    () => !!(window as any).deck && !!document.querySelector(".diascope-scene svg"),
+    null,
+    { timeout: 60_000 }
+  );
+  await settle(page);
+
+  // --- Structural proof, read straight off the live reveal DOM. reveal renders each top-level
+  // horizontal slide as a direct `.slides > section` child; a vertical stack is one such
+  // <section> that itself contains child <section>s. Both scenes carry `chapter: request-flow`,
+  // so groupIntoChapters yields ONE group of two, and DeckOutline emits ONE <Stack> (h=1) of two
+  // <Slide>s (v=0, v=1) after the title <Slide> (h=0) — exactly two top-level horizontal slides,
+  // the second being a 2-deep vertical stack. If the migration regressed to the pre-chapter
+  // topology this would be 3 top-level sections with no nesting. ---
+  const topology = await page.evaluate(() => {
+    const top = [...document.querySelectorAll(".reveal .slides > section")];
+    const chapter = top[top.length - 1];
+    return {
+      horizontal: top.length,
+      verticalInChapter: chapter ? chapter.querySelectorAll(":scope > section").length : 0,
+    };
+  });
+  expect(topology.horizontal, "expected exactly title + one chapter as top-level horizontal slides").toBe(2);
+  expect(topology.verticalInChapter, "expected BOTH scenes stacked vertically inside the single chapter").toBe(2);
+
+  // --- Chapter's first scene: h=1, v=0 = request-path ---
+  await page.evaluate(() => (window as any).deck.slide(1, 0));
+  await settle(page);
+  expect((await deckState(page)).indices, "did not land on the chapter's first scene").toMatchObject({ h: 1, v: 0 });
+  expect(await visibleTitle(page), "request-path narration not shown at h=1,v=0").toBe("The full deployment");
+  await assertInvariants(page, "chapter/request-path @ h1v0");
+  await page.screenshot({ path: `${SHOTS}/chapters-h1v0-request-path.png` });
+
+  // --- Down one within the SAME horizontal slide: h=1, v=1 = audit-trail (the vertical stack) ---
+  await page.evaluate(() => (window as any).deck.slide(1, 1));
+  await settle(page);
+  expect((await deckState(page)).indices, "second scene is not v=1 of the same h=1 chapter").toMatchObject({ h: 1, v: 1 });
+  expect(await visibleTitle(page), "audit-trail narration not shown at h=1,v=1").toBe("What gets recorded");
+  await assertInvariants(page, "chapter/audit-trail @ h1v1");
+  await page.screenshot({ path: `${SHOTS}/chapters-h1v1-audit-trail.png` });
+
+  // --- No phantom third horizontal slide: the two scenes merged into one chapter, so there is no
+  // independent second chapter to the right. reveal clamps navigation past the last horizontal
+  // slide, so asking for h=2 leaves h at the last real horizontal index (1). ---
+  await page.evaluate(() => (window as any).deck.slide(2, 0));
+  await settle(page);
+  expect((await deckState(page)).indices.h, "navigating past the last chapter revealed a phantom third horizontal slide").toBe(1);
+
+  expect(errors, `console/page errors during chapter test:\n${errors.join("\n")}`).toHaveLength(0);
 });
