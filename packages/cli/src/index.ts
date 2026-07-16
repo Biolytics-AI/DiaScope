@@ -33,14 +33,16 @@ program
   .description("Print the computed SceneState (visible/highlighted/dimmed/traced/popovers/cameraFit/text) for a scene+step")
   .requiredOption("--scene <id>", "scene id")
   .requiredOption("--step <n>", "step index (0-based)", (v: string) => parseInt(v, 10))
+  .option("--view <id>", "view/lens id (defaults to the scene's own steps)", "default")
   .option("--json", "machine-readable output")
-  .action(async (doc: string, opts: { scene: string; step: number; json?: boolean }) => {
+  .action(async (doc: string, opts: { scene: string; step: number; view: string; json?: boolean }) => {
     try {
-      const { state, graphPath } = await runResolve(doc, opts.scene, opts.step);
+      const { state, graphPath } = await runResolve(doc, opts.scene, opts.step, opts.view);
       if (opts.json) {
         console.log(JSON.stringify({ ...state, graphPath }, null, 2));
       } else {
         console.log(`scene:       ${opts.scene}`);
+        console.log(`view:        ${opts.view}`);
         console.log(`step:        ${opts.step}`);
         console.log(`visible:     ${state.visible.join(", ") || "(none)"}`);
         console.log(`highlighted: ${state.highlighted.join(", ") || "(none)"}`);

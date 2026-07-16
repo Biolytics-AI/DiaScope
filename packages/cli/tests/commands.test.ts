@@ -18,6 +18,7 @@ const missingGraphYaml = resolve(fixtures, "missing-graph.yaml");
 const malformedGraphYaml = resolve(fixtures, "malformed-graph.yaml");
 const graphD2 = resolve(fixtures, "graph.d2");
 const malformedD2 = resolve(fixtures, "malformed.d2");
+const viewsYaml = resolve(fixtures, "views.yaml");
 
 describe("runValidate", () => {
   it("reports valid: true, no errors, for a valid doc", async () => {
@@ -92,15 +93,17 @@ describe("runResolve", () => {
     expect(error!.message).toContain("Unknown scene");
   }, 30_000);
 
-  it("throws an actionable error for an out-of-range step", async () => {
-    let error: Error | undefined;
-    try {
-      await runResolve(validYaml, "main", 99);
-    } catch (e) {
-      error = e as Error;
-    }
-    expect(error).toBeInstanceOf(Error);
-    expect(error!.message).toContain("out of range");
+  // NOTE: pre-audience-lenses, runResolve called resolveStep directly, which threw on an
+  // out-of-range stepIndex. runResolve now delegates to @diascope/core's resolveStepInView
+  // (Task 5 of the audience-lenses plan), which deliberately CLAMPS stepIndex instead of
+  // throwing (see packages/core/src/views.ts + tests/views.test.ts "clamps an out-of-range
+  // stepIndex..." — clamping lets a live lens-switching UI survive a transient stale index).
+  // That contract change is intentional and applies uniformly to every resolveStepInView
+  // caller, CLI included, so this test now asserts the clamp instead of a throw.
+  it("clamps an out-of-range step to the scene's last step instead of throwing", async () => {
+    const { state } = await runResolve(validYaml, "main", 99);
+    const lastStep = await runResolve(validYaml, "main", 1); // "main" has exactly 2 steps (indices 0-1)
+    expect(state).toEqual(lastStep.state);
   }, 30_000);
   it("surfaces readable d2 compile errors (not raw JSON) when the graph is malformed", async () => {
     const err: Error = await runResolve(malformedGraphYaml, "main", 0).then(
@@ -111,6 +114,16 @@ describe("runResolve", () => {
     );
     expect(err.message).toContain("connection missing destination");
     expect(err.message).not.toContain('{"range"');
+  }, 30_000);
+
+  it("runResolve defaults to the 'default' view", async () => {
+    const { state } = await runResolve(viewsYaml, "main", 0);
+    expect(state.cameraFit.length).toBeGreaterThan(0); // fit:all resolves to every visible node
+  }, 30_000);
+
+  it("runResolve resolves against an explicit --view", async () => {
+    const { state } = await runResolve(viewsYaml, "main", 0, "legal");
+    expect(state.highlighted).toEqual(["sys.api"]);
   }, 30_000);
 });
 
