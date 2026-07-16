@@ -15,6 +15,12 @@ import {
   type ContentTransform,
 } from "./camera.js";
 import { sceneLayout } from "./layout.js";
+import {
+  applyExploreOverlay,
+  nextExploreTarget,
+  INACTIVE_EXPLORE_STATE,
+  type ExploreState,
+} from "./explore.js";
 
 export interface TwoPaneSceneProps {
   svg: string;
@@ -41,6 +47,8 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
   const [drawer, setDrawer] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null);
+  const [exploreState, setExploreState] = useState<ExploreState>(INACTIVE_EXPLORE_STATE);
+  const isFirstStepRenderRef = useRef(true);
 
   // `scene` stays possibly-undefined until AFTER all hooks have run: an unknown sceneId
   // renders error UI below instead of throwing mid-render, and the hook count stays
@@ -53,7 +61,12 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
 
   // Nodes that open a drawer — handed to GraphCanvas so it can make exactly those elements
   // keyboard-focusable. Memoized so GraphCanvas's attribute effect doesn't churn each render.
-  const interactiveNodeIds = useMemo(() => Object.keys(scene?.annotations?.nodes ?? {}), [scene]);
+  // While exploring, every node is a valid isolate/drill target, so the whole diagram becomes
+  // clickable/focusable instead of just the authored-annotation subset.
+  const interactiveNodeIds = useMemo(
+    () => (exploreState.active ? index.nodes.map(n => n.id) : Object.keys(scene?.annotations?.nodes ?? {})),
+    [exploreState.active, index, scene]
+  );
 
   // Decided once per document from the diagram's true aspect (union of node geometry), so the
   // layout never thrashes between steps — see docs/superpowers/specs/2026-07-15-adaptive-layout-design.md.
@@ -113,6 +126,34 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
     };
   }, [drawer]);
 
+  // Explore mode is a client-side escape hatch scoped to the current step: leaving the step
+  // (prev/next/pill click) should snap back to the authored view rather than carry an isolate/
+  // drill target into a step it wasn't chosen on. Skip the very first render so mounting on a
+  // given stepIndex doesn't immediately "auto-exit" state that was never entered.
+  useEffect(() => {
+    if (isFirstStepRenderRef.current) {
+      isFirstStepRenderRef.current = false;
+      return;
+    }
+    setExploreState(INACTIVE_EXPLORE_STATE);
+  }, [stepIndex]);
+
+  // Escape exits explore mode, mirroring the drawer's Escape handling below. The two are
+  // mutually exclusive (explore mode routes node clicks away from setDrawer), so only one of
+  // these two Escape listeners is ever registered at a time.
+  useEffect(() => {
+    if (!exploreState.active) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        setExploreState(INACTIVE_EXPLORE_STATE);
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [exploreState.active]);
+
   const viewBox: ViewBox | null = useMemo(() => {
     if (!binding || !containerSize || !state) return null;
     const bounds = binding.bounds(state.cameraFit);
@@ -129,9 +170,13 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
 
   const onNodeClick = useCallback(
     (id: string) => {
+      if (exploreState.active) {
+        setExploreState(prev => ({ active: true, target: nextExploreTarget(id, prev.target, index) }));
+        return;
+      }
       if (scene?.annotations?.nodes?.[id]) setDrawer(id);
     },
-    [scene]
+    [exploreState.active, scene, index]
   );
 
   const onEdgeHover = useCallback(
@@ -175,6 +220,11 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
     );
   }
 
+  // Replaces the authored SceneState with a neutral, click-driven view while explore mode is
+  // active; identity (returns `state` unchanged) when inactive, so the non-exploring render
+  // path is untouched. See src/explore.ts.
+  const renderedState = applyExploreOverlay(state, exploreState, index);
+
   return (
     <div ref={rootRef} data-diascope-part="scene" className="ds-scene" data-diascope-layout={layout}>
       <div className="ds-scene-inner">
@@ -182,7 +232,7 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
         <GraphCanvas
           svg={svg}
           index={index}
-          state={state}
+          state={renderedState}
           onNodeClick={onNodeClick}
           onEdgeHover={hasEdgeTips ? onEdgeHover : undefined}
           interactiveNodeIds={interactiveNodeIds}
@@ -193,7 +243,7 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
         />
         {/* Popovers are step annotations; the drawer is a focused dialog. Never show both —
             a card sliding under/next to the dialog reads as bleed-through. */}
-        {!drawer && (
+        {!drawer && !exploreState.active && (
           <PopoverLayer
             popovers={state.popovers}
             binding={binding}

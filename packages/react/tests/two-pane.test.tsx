@@ -287,6 +287,42 @@ describe("TwoPaneScene / useNarrative / debug layout", () => {
     const scene = container.querySelector('[data-diascope-part="scene"]');
     expect(scene!.getAttribute("data-diascope-layout")).toBe("side-by-side");
   });
+
+  // Task 2 wires explore state/click-routing into TwoPaneScene but adds no toggle UI yet (that's
+  // Task 3), so explore mode can't be driven on from outside the component here. These tests
+  // instead prove the plumbing (new hooks/state/renderedState/interactiveNodeIds branch) doesn't
+  // regress the pre-existing, non-exploring render and interaction paths.
+  it("leaf click while not exploring still opens the drawer for an annotated node (regression)", () => {
+    const onGoto = vi.fn();
+    const { container, getByLabelText } = render(
+      <TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={0} onGoto={onGoto} />
+    );
+
+    expect(container.querySelector('[data-diascope-part="drawer"]')).toBeNull();
+    fireEvent.click(sysApiDescendant(container));
+
+    const drawer = container.querySelector('[data-diascope-part="drawer"]');
+    expect(drawer).not.toBeNull();
+    expect(drawer!.textContent).toContain("API detail");
+    expect(document.activeElement).toBe(getByLabelText("Close details"));
+  });
+
+  it("renders without throwing at step 0 and step 1 with explore state wired in (smoke)", () => {
+    const onGoto = vi.fn();
+    const first = render(
+      <TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={0} onGoto={onGoto} />
+    );
+    expect(first.container.querySelector('[data-diascope-part="scene"]')).not.toBeNull();
+    first.unmount();
+
+    const second = render(
+      <TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={1} onGoto={onGoto} />
+    );
+    expect(second.container.querySelector('[data-diascope-part="scene"]')).not.toBeNull();
+    // Not exploring, so the authored popover for step 1 still renders (renderedState is the
+    // identity of the authored state when exploreState.active is false).
+    expect(second.container.querySelector('[data-diascope-part="popover"]')).not.toBeNull();
+  });
 });
 
 describe("useNarrative", () => {
