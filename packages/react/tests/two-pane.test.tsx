@@ -38,6 +38,19 @@ const doc: NarrativeDocument = {
   ],
 };
 
+// Task 4: a sibling fixture (not a mutation of `doc`) adding a single authored view so
+// TwoPaneScene's tab-row wiring can be exercised without touching the many pre-existing
+// tests above that render the plain `doc` fixture and expect no tab row.
+const docWithViews: NarrativeDocument = {
+  ...doc,
+  scenes: [
+    {
+      ...doc.scenes[0],
+      views: [{ id: "focused", label: "Focused", steps: [{ id: "f0", focus: ["request"] }] }],
+    },
+  ],
+};
+
 describe("TwoPaneScene / useNarrative / debug layout", () => {
   let svg: string;
   let index: GraphIndex;
@@ -420,6 +433,25 @@ describe("TwoPaneScene / useNarrative / debug layout", () => {
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
     rerender(<TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={1} onGoto={onGoto} />);
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  // Task 4: wires effectiveSteps/resolveStepInView + NarrativePane's tab row (Task 3) together.
+  it("renders a tab row and switches the active view + resets to step 0 on tab click", () => {
+    const onGoto = vi.fn();
+    const { container, getByText } = render(
+      <TwoPaneScene svg={svg} index={index} doc={docWithViews} sceneId="main" stepIndex={1} onGoto={onGoto} />
+    );
+    const tabs = container.querySelector('[data-diascope-part="lens-tabs"]');
+    expect(tabs).not.toBeNull();
+    fireEvent.click(getByText("Focused"));
+    expect(onGoto).toHaveBeenCalledWith(0);
+  });
+
+  it("a scene with no views renders no tab row (regression)", () => {
+    const { container } = render(
+      <TwoPaneScene svg={svg} index={index} doc={doc} sceneId="main" stepIndex={0} onGoto={vi.fn()} />
+    );
+    expect(container.querySelector('[data-diascope-part="lens-tabs"]')).toBeNull();
   });
 });
 

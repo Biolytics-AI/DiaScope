@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GraphIndex, NarrativeDocument } from "@diascope/core";
-import { resolveStep } from "@diascope/core";
+import { effectiveSteps, resolveStepInView } from "@diascope/core";
 import type { SvgGraphBinding } from "@diascope/d2";
 import { GraphCanvas } from "./GraphCanvas.js";
 import { PopoverLayer } from "./PopoverLayer.js";
@@ -35,8 +35,9 @@ export interface TwoPaneSceneProps {
 /**
  * The classic DiaScope layout: diagram + popovers on the left, narration pane on the right,
  * plus a node-detail drawer and edge tooltips layered over the canvas. Resolves the current
- * step via @diascope/core's resolveStep and wires GraphCanvas's node-click/edge-hover events
- * to the scene's `annotations` (drawer content for nodes, tooltip text for edges).
+ * step via @diascope/core's resolveStepInView (against the active audience lens) and wires
+ * GraphCanvas's node-click/edge-hover events to the scene's `annotations` (drawer content for
+ * nodes, tooltip text for edges).
  */
 export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: TwoPaneSceneProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -49,6 +50,7 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null);
   const [exploreState, setExploreState] = useState<ExploreState>(INACTIVE_EXPLORE_STATE);
+  const [activeViewId, setActiveViewId] = useState("default");
   const isFirstStepRenderRef = useRef(true);
 
   // `scene` stays possibly-undefined until AFTER all hooks have run: an unknown sceneId
@@ -56,8 +58,8 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
   // consistent whether or not the scene exists.
   const scene = doc.scenes.find(s => s.id === sceneId);
   const state = useMemo(
-    () => (scene ? resolveStep(doc, sceneId, stepIndex, index) : null),
-    [doc, scene, sceneId, stepIndex, index]
+    () => (scene ? resolveStepInView(doc, sceneId, activeViewId, stepIndex, index) : null),
+    [doc, scene, sceneId, activeViewId, stepIndex, index]
   );
 
   // Nodes that open a drawer — handed to GraphCanvas so it can make exactly those elements
@@ -69,6 +71,12 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
     [exploreState.active, index, scene]
   );
 
+  // The scene's audience lenses: an implicit "default" view plus any authored `views`, handed
+  // to NarrativePane's tab row (Task 3). Always at least one entry, so a scene with no `views`
+  // still produces a list — NarrativePane itself decides not to render a tab row when there's
+  // only one choice.
+  const views = useMemo(() => (scene ? effectiveSteps(scene) : []), [scene]);
+
   // Decided once per document from the diagram's true aspect (union of node geometry), so the
   // layout never thrashes between steps — see docs/superpowers/specs/2026-07-15-adaptive-layout-design.md.
   const layout = useMemo(() => sceneLayout(index), [index]);
@@ -78,6 +86,12 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
   useEffect(() => {
     if (rootRef.current) installLayoutDebug(rootRef.current);
   }, [scene]);
+
+  // A new scene starts back on its own default lens rather than carrying over whichever view
+  // id happened to be active for the previous scene (which may not even exist on this one).
+  useEffect(() => {
+    setActiveViewId("default");
+  }, [sceneId]);
 
   // Track the canvas wrapper's pixel size so PopoverLayer can convert diagram-space bounds
   // to screen coordinates. We use offsetWidth/offsetHeight (the UNTRANSFORMED layout size)
@@ -178,6 +192,16 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
       if (scene?.annotations?.nodes?.[id]) setDrawer(id);
     },
     [exploreState.active, scene, index]
+  );
+
+  // Switching lenses resets to step 0 of the newly active view — a mid-narrative step index
+  // from one lens rarely lines up meaningfully with another lens's own step sequence.
+  const onLensChange = useCallback(
+    (viewId: string) => {
+      setActiveViewId(viewId);
+      onGoto(0);
+    },
+    [onGoto]
   );
 
   const onEdgeHover = useCallback(
@@ -314,7 +338,14 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
           </div>
         )}
       </div>
-      <NarrativePane scene={scene} stepIndex={stepIndex} onGoto={onGoto} />
+      <NarrativePane
+        scene={scene}
+        stepIndex={stepIndex}
+        onGoto={onGoto}
+        views={views.map(v => ({ id: v.id, label: v.label }))}
+        activeViewId={activeViewId}
+        onLensChange={onLensChange}
+      />
       </div>
     </div>
   );
