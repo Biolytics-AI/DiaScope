@@ -182,7 +182,9 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
 
   const onEdgeHover = useCallback(
     (id: string | null, ev: MouseEvent) => {
-      if (!id) {
+      // Tooltips are step annotations, same as popovers/the drawer — suppressed while
+      // exploring so a stale hover card can't sit over the neutral explore view.
+      if (!id || exploreState.active) {
         setTooltip(null);
         return;
       }
@@ -207,7 +209,7 @@ export function TwoPaneScene({ svg, index, doc, sceneId, stepIndex, onGoto }: Tw
       const scale = wrap.offsetWidth ? r.width / wrap.offsetWidth : 1;
       setTooltip({ text, x: (ev.clientX - r.left) / scale, y: (ev.clientY - r.top) / scale });
     },
-    [scene, index]
+    [scene, index, exploreState.active]
   );
 
   const edgeTips = scene?.annotations?.edges;
